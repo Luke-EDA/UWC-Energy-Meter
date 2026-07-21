@@ -1,0 +1,19 @@
+{
+  "name": "uwc-energy-meter",
+  "version": "1.0.0",
+  "description": "Web-based dashboard and ingestion API for three-phase energy monitoring over 4G.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development node src/server.js"
+  },
+  "dependencies": {
+    "@fastify/static": "^7.0.4",
+    "fastify": "^4.28.1",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

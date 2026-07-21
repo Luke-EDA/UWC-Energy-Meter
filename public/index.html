@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UWC Energy Meter Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>UWC Energy Meter</h1>
+      <p>Three-phase live voltage, current, wattage and consumption monitoring</p>
+    </div>
+    <div class="status-card">
+      <span id="connectionDot" class="dot warn"></span>
+      <span id="connectionText">Connecting...</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="cards">
+      <div class="card"><span>Neutral</span><strong id="neutralStatus">--</strong></div>
+      <div class="card"><span>Total live power</span><strong id="totalKw">-- kW</strong></div>
+      <div class="card"><span>Frequency</span><strong id="frequency">-- Hz</strong></div>
+      <div class="card"><span>Last update</span><strong id="lastUpdate">--</strong></div>
+    </section>
+
+    <section class="panel">
+      <h2>Live Line Readings</h2>
+      <div class="table-wrap">
+        <table id="liveTable">
+          <thead>
+            <tr>
+              <th>Line</th><th>Voltage</th><th>Current</th><th>Power Now</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Live 1</td><td id="l1v">-- V</td><td id="l1c">-- A</td><td id="l1p">-- kW</td></tr>
+            <tr><td>Live 2</td><td id="l2v">-- V</td><td id="l2c">-- A</td><td id="l2p">-- kW</td></tr>
+            <tr><td>Live 3</td><td id="l3v">-- V</td><td id="l3c">-- A</td><td id="l3p">-- kW</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Energy Consumption Summary</h2>
+      <div class="table-wrap">
+        <table id="summaryTable">
+          <thead><tr><th>Period</th><th>Live 1</th><th>Live 2</th><th>Live 3</th><th>Total</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel chart-panel">
+      <div class="chart-heading">
+        <h2>24-Hour Power Consumption Graph</h2>
+        <p>Latest reading appears at the far-right point.</p>
+      </div>
+      <canvas id="powerChart"></canvas>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
