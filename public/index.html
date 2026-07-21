@@ -1,69 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>UWC Energy Meter Dashboard</title>
-  <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="UWC Energy Monitor multi-device dashboard">
+  <title>UWC Energy Monitor</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>UWC Energy Meter</h1>
-      <p>Three-phase live voltage, current, wattage and consumption monitoring</p>
-    </div>
-    <div class="status-card">
-      <span id="connectionDot" class="dot warn"></span>
-      <span id="connectionText">Connecting...</span>
-    </div>
-  </header>
-
-  <main>
-    <section class="cards">
-      <div class="card"><span>Neutral</span><strong id="neutralStatus">--</strong></div>
-      <div class="card"><span>Total live power</span><strong id="totalKw">-- kW</strong></div>
-      <div class="card"><span>Frequency</span><strong id="frequency">-- Hz</strong></div>
-      <div class="card"><span>Last update</span><strong id="lastUpdate">--</strong></div>
-    </section>
-
-    <section class="panel">
-      <h2>Live Line Readings</h2>
-      <div class="table-wrap">
-        <table id="liveTable">
-          <thead>
-            <tr>
-              <th>Line</th><th>Voltage</th><th>Current</th><th>Power Now</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Live 1</td><td id="l1v">-- V</td><td id="l1c">-- A</td><td id="l1p">-- kW</td></tr>
-            <tr><td>Live 2</td><td id="l2v">-- V</td><td id="l2c">-- A</td><td id="l2p">-- kW</td></tr>
-            <tr><td>Live 3</td><td id="l3v">-- V</td><td id="l3c">-- A</td><td id="l3p">-- kW</td></tr>
-          </tbody>
-        </table>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="brand-kicker">UWC</p>
+        <h1>Energy Monitor</h1>
       </div>
-    </section>
-
-    <section class="panel">
-      <h2>Energy Consumption Summary</h2>
-      <div class="table-wrap">
-        <table id="summaryTable">
-          <thead><tr><th>Period</th><th>Live 1</th><th>Live 2</th><th>Live 3</th><th>Total</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <div class="build-badge" aria-label="Development build">
+        <span>Development Build</span>
+        <strong>v1.2.0</strong>
       </div>
-    </section>
+    </header>
 
-    <section class="panel chart-panel">
-      <div class="chart-heading">
-        <h2>24-Hour Power Consumption Graph</h2>
-        <p>Latest reading appears at the far-right point.</p>
+    <main class="content">
+      <section class="summary-grid" aria-label="System summary">
+        <article class="summary-card">
+          <span class="summary-label">Devices</span>
+          <strong id="deviceCount" class="summary-value">--</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Online</span>
+          <strong id="onlineCount" class="summary-value">--</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Power</span>
+          <strong id="totalPower" class="summary-value">-- kW</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Voltage</span>
+          <strong id="averageVoltage" class="summary-value">-- V</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Last Update</span>
+          <strong id="lastUpdate" class="summary-value summary-time">--:--:--</strong>
+        </article>
+      </section>
+
+      <section class="dashboard-actions" aria-label="Dashboard actions">
+        <div>
+          <p class="section-eyebrow">Connected equipment</p>
+          <h2>Devices</h2>
+        </div>
+        <button id="addDeviceButton" class="primary-button" type="button">+ Add Device</button>
+      </section>
+
+      <div id="dashboardMessage" class="message" role="status" aria-live="polite">Loading devices…</div>
+      <section id="deviceGrid" class="device-grid" aria-label="Connected devices"></section>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <strong>UWC Energy Monitor</strong>
+        <span>Version 1.2.0 · Dashboard</span>
       </div>
-      <canvas id="powerChart"></canvas>
-    </section>
-  </main>
+      <div class="footer-status">
+        <span>Simulator Backend</span>
+        <span>SQLite Connected</span>
+        <span id="footerDeviceStatus">0 Devices Online</span>
+      </div>
+    </footer>
+  </div>
 
-  <script src="/app.js"></script>
+  <dialog id="addDeviceDialog" class="modal">
+    <form method="dialog" class="modal-card">
+      <h2>Add Device</h2>
+      <p>Device management will be added in a later milestone.</p>
+      <button class="primary-button" value="close">Close</button>
+    </form>
+  </dialog>
+
+  <script src="/js/dashboard.js" defer></script>
 </body>
 </html>

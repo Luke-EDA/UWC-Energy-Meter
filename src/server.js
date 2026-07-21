@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * UWC Energy Meter - Node.js backend
+ * UWC Energy Monitor - Node.js backend
  * Receives 3-phase voltage/current data from PCB/modem over HTTPS/4G,
  * stores readings in SQLite, broadcasts live updates over WebSocket,
  * and serves the browser dashboard.
@@ -242,7 +242,7 @@ app.get('/api/devices', async () => {
 app.get('/api/latest', async (request) => rowToApi(await latestReading(request.query.deviceId || 'uwc-meter-001')));
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', Number(request.query.hours || 24)));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));
-app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Meter', requestId: crypto.randomUUID() }));
+app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
 
 const start = async () => {
   await app.listen({ port: PORT, host: HOST });
@@ -257,7 +257,7 @@ const server = app.server;
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', ws => {
-  ws.send(JSON.stringify({ type: 'hello', data: { service: 'UWC Energy Meter', ts: Date.now() } }));
+  ws.send(JSON.stringify({ type: 'hello', data: { service: 'UWC Energy Monitor', ts: Date.now() } }));
 });
 
 if (ENABLE_SIMULATOR) {

@@ -1,7 +1,8 @@
 {
-  "name": "uwc-energy-meter",
-  "version": "1.0.0",
-  "description": "Web-based dashboard and ingestion API for three-phase energy monitoring over 4G.",
+  "name": "uwc-energy-monitor",
+  "version": "1.2.0",
+  "buildName": "Dashboard"
+  "description": "Web-based multi-device dashboard and ingestion API for three-phase energy monitoring.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -15,5 +16,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "buildName": "Dashboard"
 }
