@@ -1,18 +1,8 @@
-# Node modules
 node_modules/
-
-# Logs
+.env
 *.log
-npm-debug.log*
 
-# IDEs
-.vscode/
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# macOS
-.DS_Store
 # Runtime database
 energy_meter.sqlite
+*.sqlite-shm
+*.sqlite-wal

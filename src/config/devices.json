@@ -2,31 +2,45 @@
   {
     "id": 1,
     "name": "Main Distribution Board",
-    "type": "dummy",
+    "provider": "dummy",
     "enabled": true,
-    "ipAddress": "192.168.1.100",
-    "port": 502,
-    "slaveId": 1,
-    "pollInterval": 1000
+    "pollInterval": 1000,
+    "connection": {
+      "host": "192.168.1.100"
+    },
+    "providerOptions": {}
   },
   {
     "id": 2,
     "name": "Workshop",
-    "type": "dummy",
+    "provider": "dummy",
     "enabled": true,
-    "ipAddress": "192.168.1.101",
-    "port": 502,
-    "slaveId": 2,
-    "pollInterval": 1000
+    "pollInterval": 1000,
+    "connection": {
+      "host": "192.168.1.101"
+    },
+    "providerOptions": {}
   },
   {
     "id": 3,
     "name": "Office Block",
-    "type": "dummy",
+    "provider": "dummy",
+    "enabled": false,
+    "pollInterval": 1000,
+    "connection": {
+      "host": "192.168.1.102"
+    },
+    "providerOptions": {}
+  },
+  {
+    "id": 4,
+    "name": "Test Device",
+    "provider": "network",
     "enabled": true,
-    "ipAddress": "192.168.1.102",
-    "port": 502,
-    "slaveId": 3,
-    "pollInterval": 1000
+    "pollInterval": 1000,
+    "connection": {
+      "host": ""
+    },
+    "providerOptions": {}
   }
 ]
