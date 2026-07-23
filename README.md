@@ -1,47 +1,52 @@
-# UWC Energy Meter
+# UWC Energy Monitor
 
-A web-based dashboard and ingestion API for a three-phase mains energy monitoring system.
+A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## What it shows
+## Version 1.5.0: Communications Framework
 
-- Live voltage, current and calculated power for Live 1, Live 2 and Live 3
-- Neutral presence status
-- Total live power in kW
-- Consumption summary for the last 24 hours, 7 days, 1 month, 6 months and 12 months
-- 24-hour line graph showing L1, L2 and L3 power consumption
+The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
+
+The application now uses a provider architecture:
+
+- `BaseProvider` defines the common adapter interface.
+- `DummyProvider` supplies simulated readings through that interface.
+- `ProviderFactory` selects the adapter configured for each device.
+- `UnconfiguredNetworkProvider` represents future Wi-Fi hardware without guessing its protocol.
+- Device status is standardised as Online, Offline, Disabled, Initialising, or Not Configured.
+
+A future adapter only needs to translate its protocol into the application's existing standard measurement object. The dashboard, history database, and device-details page remain independent of the communications method.
 
 ## Run locally
 
 ```bash
 npm install
-DEVICE_TOKEN=change-this-token-before-deployment npm start
+npm start
 ```
 
-Open: `http://localhost:3000`
+Open `http://localhost:3000`.
 
-The app includes a built-in simulator by default. Disable it with:
+The app includes dummy simulator devices by default. The database is runtime data and is created automatically when the application starts.
 
-```bash
-ENABLE_SIMULATOR=false npm start
-```
+## Current providers
 
-## PCB/modem data post example
+### Dummy Simulator
 
-```bash
-curl -X POST http://localhost:3000/api/readings \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer change-this-token-before-deployment" \
-  -d '{
-    "deviceId":"uwc-meter-001",
-    "neutralPresent":true,
-    "frequencyHz":50,
-    "powerFactor":0.96,
-    "l1":{"voltage":230,"current":36.2},
-    "l2":{"voltage":231,"current":30.4},
-    "l3":{"voltage":229,"current":41.1}
-  }'
-```
+Produces smooth simulated three-phase measurements and stores them in SQLite.
+
+### Network Adapter (not configured)
+
+A protocol-neutral placeholder. It accepts an optional local-network host but intentionally does not communicate until the device firmware and protocol are defined.
+
+## Future adapter contract
+
+New providers extend `src/services/baseProvider.js` and implement an asynchronous `read()` method. A successful read returns the common internal measurement shape used by the application.
+
+Provider-specific configuration belongs in `providerOptions`; generic addressing belongs in `connection`. This prevents protocol-specific fields from becoming part of the core device model.
+
+## Existing ingestion endpoint
+
+The authenticated `POST /api/readings` endpoint remains available for testing and for a possible future push-based adapter.
 
 ## Important electrical note
 
-This software assumes that the PCB/firmware performs safe isolation, calibration and validation before transmitting readings. Work on mains circuits must be done by competent electrical professionals and must comply with applicable South African wiring and safety standards.
+This software assumes that the PCB and firmware perform safe isolation, calibration, and validation before transmitting readings. Work on mains circuits must be done by competent electrical professionals and comply with applicable wiring and safety standards.

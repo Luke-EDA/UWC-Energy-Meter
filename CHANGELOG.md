@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.5.0 - Communications Framework
+
+### Added
+- Protocol-agnostic provider interface for device data sources.
+- Provider factory for selecting adapters per configured device.
+- Network Adapter placeholder that makes no assumptions about the future Wi-Fi protocol.
+- Standard provider states: Online, Offline, Disabled, Initialising, Error and Adapter Not Configured.
+- Generic `connection` and `providerOptions` configuration objects.
+- `GET /api/providers` endpoint for discoverable provider types.
+
+### Changed
+- Refactored the Dummy Simulator to use the same provider contract as future hardware adapters.
+- Replaced Modbus-specific form fields with Data Provider, optional Network Host and Update Interval.
+- Migrated default device configuration to the protocol-neutral schema.
+- Dashboard totals now include only providers that are actively Online.
+- Device Details retains historical access for disabled, offline and unconfigured devices.
+- Updated application version and build metadata to 1.5.0 / Communications Framework.
+
+### Compatibility
+- Existing v1.4.x configuration fields are still read and migrated internally.
+- Existing API aliases such as `type` and `ipAddress` remain available during the transition.
+
 ## 1.4.2 - Disabled Device History
 
 ### Fixed

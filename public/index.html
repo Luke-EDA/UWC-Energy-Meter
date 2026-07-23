@@ -16,7 +16,7 @@
       </div>
       <div class="build-badge" aria-label="Development build">
         <span>Development Build</span>
-        <strong>v1.4.2</strong>
+        <strong>v1.5.0</strong>
       </div>
     </header>
 
@@ -39,8 +39,8 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.4.2 · Disabled Device History</span></div>
-      <div class="footer-status"><span>Simulator Backend</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.0 · Communications Framework</span></div>
+      <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
 
@@ -53,11 +53,9 @@
 
       <div class="form-grid">
         <label class="form-field form-field-wide"><span>Device Name</span><input id="deviceNameInput" name="name" type="text" minlength="2" maxlength="80" placeholder="e.g. Generator Room" required></label>
-        <label class="form-field form-field-wide"><span>Device Type</span><select name="type" required><option value="dummy">Dummy Simulator</option></select></label>
-        <label class="form-field form-field-wide"><span>IP Address or Host Name</span><input name="ipAddress" type="text" placeholder="e.g. 192.168.1.103"><small>Optional while using the simulator.</small></label>
-        <label class="form-field"><span>TCP Port</span><input name="port" type="number" min="1" max="65535" value="502" required></label>
-        <label class="form-field"><span>Modbus Slave ID</span><input name="slaveId" type="number" min="1" max="247" value="1" required></label>
-        <label class="form-field form-field-wide"><span>Poll Interval</span><div class="input-with-unit"><input name="pollInterval" type="number" min="250" max="60000" step="250" value="1000" required><span>ms</span></div></label>
+        <label class="form-field form-field-wide"><span>Data Provider</span><select name="provider" required><option value="dummy">Dummy Simulator</option><option value="network">Network Adapter (not configured)</option></select><small>The network option is a protocol-neutral placeholder for future hardware.</small></label>
+        <label class="form-field form-field-wide"><span>Network Host</span><input name="host" type="text" maxlength="255" placeholder="e.g. 192.168.1.103 or meter-room.local"><small>Optional until the device communication method is defined.</small></label>
+        <label class="form-field form-field-wide"><span>Update Interval</span><div class="input-with-unit"><input name="pollInterval" type="number" min="250" max="60000" step="250" value="1000" required><span>ms</span></div></label>
         <label class="checkbox-field form-field-wide"><input name="enabled" type="checkbox" checked><span id="enabledLabel">Enable this device immediately</span></label>
       </div>
 

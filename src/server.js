@@ -2,8 +2,8 @@
 
 /**
  * UWC Energy Monitor - Node.js backend
- * Receives 3-phase voltage/current data from PCB/modem over HTTPS/4G,
- * stores readings in SQLite, broadcasts live updates over WebSocket,
+ * Accepts three-phase readings through protocol-independent providers or the
+ * ingestion API, stores them in SQLite, broadcasts live updates over WebSocket,
  * and serves the browser dashboard.
  */
 
@@ -199,15 +199,23 @@ function getDevicesApi() {
 
         enabled: device.enabled,
 
+        provider: device.provider,
+
         type: device.type,
+
+        connection: device.connection,
 
         ipAddress: device.ipAddress,
 
-        port: device.port,
-
-        slaveId: device.slaveId,
-
         pollInterval: device.pollInterval,
+
+        status: device.status,
+
+        statusMessage: device.statusMessage,
+
+        lastAttempt: device.lastAttempt,
+
+        lastSuccess: device.lastSuccess,
 
         averageVoltage: device.data?.averageVoltage ?? null,
 
@@ -248,6 +256,8 @@ app.get('/api/devices', async () => {
 
 });
 
+app.get('/api/providers', async () => deviceManager.getProviders());
+
 app.post('/api/devices', async (request, reply) => {
   try {
     const device = deviceManager.addDevice(request.body || {});
@@ -256,11 +266,13 @@ app.post('/api/devices', async (request, reply) => {
       id: device.id,
       name: device.name,
       enabled: device.enabled,
+      provider: device.provider,
       type: device.type,
+      connection: device.connection,
       ipAddress: device.ipAddress,
-      port: device.port,
-      slaveId: device.slaveId,
-      pollInterval: device.pollInterval
+      pollInterval: device.pollInterval,
+      status: device.status,
+      statusMessage: device.statusMessage
     };
   } catch (err) {
     reply.code(400).send({ error: err.message });
@@ -269,7 +281,7 @@ app.post('/api/devices', async (request, reply) => {
 
 app.put('/api/devices/:id', async (request, reply) => {
   try {
-    return deviceManager.updateDevice(request.params.id, request.body || {});
+    return await deviceManager.updateDevice(request.params.id, request.body || {});
   } catch (err) {
     const status = err.message === 'Device not found.' ? 404 : 400;
     reply.code(status).send({ error: err.message });
@@ -278,7 +290,7 @@ app.put('/api/devices/:id', async (request, reply) => {
 
 app.delete('/api/devices/:id', async (request, reply) => {
   try {
-    const device = deviceManager.removeDevice(request.params.id);
+    const device = await deviceManager.removeDevice(request.params.id);
     return { ok: true, device };
   } catch (err) {
     const status = err.message === 'Device not found.' ? 404 : 400;

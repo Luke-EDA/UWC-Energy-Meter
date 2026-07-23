@@ -56,22 +56,21 @@ function formatTime(timestamp) {
 }
 
 function isDeviceOnline(device) {
-  return device.enabled !== false && Boolean(device.lastUpdate);
+  return device.enabled !== false && device.status === 'online';
 }
 
 function getLatestTimestamp(devices) {
   const timestamps = devices
-    .filter((device) => device.enabled !== false)
+    .filter(isDeviceOnline)
     .map((device) => new Date(device.lastUpdate).getTime())
     .filter(Number.isFinite);
   return timestamps.length ? Math.max(...timestamps) : null;
 }
 
 function renderSummary(devices) {
-  const enabledDevices = devices.filter((device) => device.enabled !== false);
-  const onlineDevices = enabledDevices.filter(isDeviceOnline);
-  const totalPower = enabledDevices.reduce((sum, device) => sum + Number(device.totalPower || 0), 0);
-  const validVoltages = enabledDevices.map((device) => Number(device.averageVoltage)).filter(Number.isFinite);
+  const onlineDevices = devices.filter(isDeviceOnline);
+  const totalPower = onlineDevices.reduce((sum, device) => sum + Number(device.totalPower || 0), 0);
+  const validVoltages = onlineDevices.map((device) => Number(device.averageVoltage)).filter(Number.isFinite);
   const averageVoltage = validVoltages.length
     ? validVoltages.reduce((sum, value) => sum + value, 0) / validVoltages.length
     : 0;
@@ -88,29 +87,43 @@ function createMetricRow(label, value, className = '') {
   return `<div class="metric-row ${className}"><span class="metric-label">${label}</span><strong class="metric-value">${value}</strong></div>`;
 }
 
+function getStatusPresentation(device) {
+  if (device.enabled === false || device.status === 'disabled') {
+    return { text: 'DISABLED', className: 'disabled', message: 'No live data' };
+  }
+  if (device.status === 'online') {
+    return { text: 'ONLINE', className: '', message: '' };
+  }
+  if (device.status === 'adapter_not_configured') {
+    return { text: 'NOT CONFIGURED', className: 'offline', message: 'Network adapter not configured' };
+  }
+  if (device.status === 'initialising') {
+    return { text: 'INITIALISING', className: 'offline', message: 'Waiting for first reading' };
+  }
+  return { text: 'OFFLINE', className: 'offline', message: device.statusMessage || 'No live data' };
+}
+
 function createDeviceCard(device) {
   const safeName = escapeHtml(device.name);
   const target = `/device.html?deviceId=${encodeURIComponent(device.name)}`;
-  const disabled = device.enabled === false;
-  const online = isDeviceOnline(device);
-  const statusClass = disabled ? 'disabled' : (online ? '' : 'offline');
-  const statusText = disabled ? 'DISABLED' : (online ? 'ONLINE' : 'OFFLINE');
+  const status = getStatusPresentation(device);
+  const hasLiveData = isDeviceOnline(device);
 
-  const content = disabled
-    ? '<div class="disabled-message">No live data</div>'
-    : `<div class="device-metrics">
+  const content = hasLiveData
+    ? `<div class="device-metrics">
         ${createMetricRow('Voltage', `${formatNumber(device.averageVoltage, 1)} V`)}
         ${createMetricRow('Current', `${formatNumber(device.totalCurrent, 1)} A`)}
         ${createMetricRow('Power', `${formatNumber(device.totalPower, 2)} kW`)}
         ${createMetricRow('Last Update', formatTime(device.lastUpdate), 'last-update')}
-      </div>`;
+      </div>`
+    : `<div class="disabled-message">${escapeHtml(status.message)}</div>`;
 
   return `
-    <article class="device-card ${disabled ? 'is-disabled' : ''}">
+    <article class="device-card ${hasLiveData ? '' : 'is-disabled'}">
       <div class="device-card-header">
         <h3>${safeName}</h3>
         <div class="device-card-controls">
-          <span class="status ${statusClass}">${statusText}</span>
+          <span class="status ${status.className}">${status.text}</span>
           <button class="settings-button" type="button" data-device-id="${device.id}" aria-label="Configure ${safeName}" title="Configure device">⚙</button>
         </div>
       </div>
@@ -156,10 +169,8 @@ function setDialogMode(device = null) {
     elements.deleteDeviceButton.hidden = false;
     elements.enabledLabel.textContent = 'Enable this device';
     elements.deviceForm.elements.name.value = device.name;
-    elements.deviceForm.elements.type.value = device.type;
-    elements.deviceForm.elements.ipAddress.value = device.ipAddress || '';
-    elements.deviceForm.elements.port.value = device.port;
-    elements.deviceForm.elements.slaveId.value = device.slaveId;
+    elements.deviceForm.elements.provider.value = device.provider || device.type || 'dummy';
+    elements.deviceForm.elements.host.value = device.connection?.host || device.ipAddress || '';
     elements.deviceForm.elements.pollInterval.value = device.pollInterval;
     elements.deviceForm.elements.enabled.checked = device.enabled !== false;
   } else {
@@ -168,6 +179,9 @@ function setDialogMode(device = null) {
     elements.saveDeviceButton.textContent = 'Save Device';
     elements.deleteDeviceButton.hidden = true;
     elements.enabledLabel.textContent = 'Enable this device immediately';
+    elements.deviceForm.elements.provider.value = 'dummy';
+    elements.deviceForm.elements.pollInterval.value = 1000;
+    elements.deviceForm.elements.enabled.checked = true;
   }
 }
 
@@ -183,10 +197,9 @@ function formPayload() {
   const formData = new FormData(elements.deviceForm);
   return {
     name: formData.get('name'),
-    type: formData.get('type'),
-    ipAddress: formData.get('ipAddress'),
-    port: Number(formData.get('port')),
-    slaveId: Number(formData.get('slaveId')),
+    provider: formData.get('provider'),
+    connection: { host: formData.get('host') },
+    providerOptions: {},
     pollInterval: Number(formData.get('pollInterval')),
     enabled: formData.get('enabled') === 'on'
   };

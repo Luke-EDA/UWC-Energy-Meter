@@ -39,6 +39,12 @@ function setDisabledState() {
   byId('headerLastUpdate').textContent = 'No live data';
 }
 
+function setUnavailableState(device) {
+  byId('connectionDot').className = 'dot warn';
+  byId('connectionText').textContent = device.status === 'adapter_not_configured' ? 'NOT CONFIGURED' : 'OFFLINE';
+  byId('headerLastUpdate').textContent = device.statusMessage || 'No live data';
+}
+
 function setPageError(message) {
   const element = byId('pageMessage');
   element.textContent = message;
@@ -200,8 +206,15 @@ async function initialise() {
     return;
   }
 
+  if (selectedDevice.status !== 'online') {
+    if (latest) updateLive(latest);
+    setUnavailableState(selectedDevice);
+    return;
+  }
+
   if (!latest) {
-    throw new Error(`No readings are available for ${selectedDeviceId}`);
+    setUnavailableState({ status: 'offline', statusMessage: `No readings are available for ${selectedDeviceId}` });
+    return;
   }
 
   updateLive(latest);
