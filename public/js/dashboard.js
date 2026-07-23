@@ -114,7 +114,7 @@ function createDeviceCard(device) {
           <button class="settings-button" type="button" data-device-id="${device.id}" aria-label="Configure ${safeName}" title="Configure device">⚙</button>
         </div>
       </div>
-      ${disabled ? content : `<a class="device-card-link" href="${target}" aria-label="Open details for ${safeName}">${content}</a>`}
+      <a class="device-card-link" href="${target}" aria-label="Open details for ${safeName}">${content}</a>
     </article>`;
 }
 

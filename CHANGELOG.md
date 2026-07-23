@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.2 - Disabled Device History
+
+### Fixed
+- Disabled device cards remain clickable and continue to open the Device Details page.
+- Historical charts and energy summaries remain available while a device is disabled.
+
+### Changed
+- Disabled Device Details pages now show a grey Disabled status and No live data instead of attempting a live WebSocket connection.
+- No readings are generated or stored while a device remains disabled.
+- Updated application version and build metadata to 1.4.2 / Disabled Device History.
+
 ## 1.4.1 - Device Configuration
 
 ### Added

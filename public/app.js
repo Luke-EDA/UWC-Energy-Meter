@@ -33,6 +33,12 @@ function setConnection(ok) {
   byId('connectionText').textContent = ok ? 'ONLINE' : 'RECONNECTING';
 }
 
+function setDisabledState() {
+  byId('connectionDot').className = 'dot disabled';
+  byId('connectionText').textContent = 'DISABLED';
+  byId('headerLastUpdate').textContent = 'No live data';
+}
+
 function setPageError(message) {
   const element = byId('pageMessage');
   element.textContent = message;
@@ -174,19 +180,31 @@ async function initialise() {
 
   updateDeviceName(selectedDeviceId);
 
+  const devices = await getJson('/api/devices');
+  const selectedDevice = devices.find((device) => device.name === selectedDeviceId);
+  if (!selectedDevice) {
+    throw new Error(`The device ${selectedDeviceId} is no longer configured`);
+  }
+
   const [latest, historyRows] = await Promise.all([
     getJson(apiUrl('/api/latest')),
     getJson(apiUrl('/api/history', { hours: 24 }))
   ]);
+
+  buildChart(historyRows);
+  await loadSummary();
+  window.setInterval(loadSummary, 60_000);
+
+  if (selectedDevice.enabled === false) {
+    setDisabledState();
+    return;
+  }
 
   if (!latest) {
     throw new Error(`No readings are available for ${selectedDeviceId}`);
   }
 
   updateLive(latest);
-  buildChart(historyRows);
-  await loadSummary();
-  window.setInterval(loadSummary, 60_000);
   connectWebSocket();
 }
 

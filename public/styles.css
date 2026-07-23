@@ -134,6 +134,11 @@ h1 {
   box-shadow: 0 0 0 5px rgba(40, 167, 69, 0.13);
 }
 
+.dot.disabled {
+  background: #64748b;
+  box-shadow: 0 0 0 5px rgba(100, 116, 139, 0.13);
+}
+
 .detail-content { padding: 28px 32px 48px; }
 
 .overview-grid {

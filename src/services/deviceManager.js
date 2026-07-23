@@ -132,7 +132,7 @@ class DeviceManager {
       throw new Error('A device with this name already exists.');
     }
     if (type !== 'dummy') {
-      throw new Error('Only the Dummy Simulator device type is available in version 1.4.1.');
+      throw new Error('Only the Dummy Simulator device type is available in version 1.4.2.');
     }
     if (ipAddress && !/^([a-z0-9-]+\.)*[a-z0-9-]+$/i.test(ipAddress) && !/^\d{1,3}(\.\d{1,3}){3}$/.test(ipAddress)) {
       throw new Error('Enter a valid IP address or host name.');

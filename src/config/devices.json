@@ -3,30 +3,30 @@
     "id": 1,
     "name": "Main Distribution Board",
     "type": "dummy",
+    "enabled": true,
     "ipAddress": "192.168.1.100",
     "port": 502,
     "slaveId": 1,
-    "pollInterval": 1000,
-    "enabled": true
+    "pollInterval": 1000
   },
   {
     "id": 2,
     "name": "Workshop",
     "type": "dummy",
+    "enabled": true,
     "ipAddress": "192.168.1.101",
     "port": 502,
     "slaveId": 2,
-    "pollInterval": 1000,
-    "enabled": true
+    "pollInterval": 1000
   },
   {
     "id": 3,
-    "name": "Winepress 1",
+    "name": "Office Block",
     "type": "dummy",
+    "enabled": true,
     "ipAddress": "192.168.1.102",
     "port": 502,
     "slaveId": 3,
-    "pollInterval": 1000,
-    "enabled": true
+    "pollInterval": 1000
   }
 ]
