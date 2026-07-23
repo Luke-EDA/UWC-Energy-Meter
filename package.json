@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.5.0",
-  "description": "Protocol-agnostic multi-device dashboard and ingestion API for three-phase energy monitoring.",
+  "version": "1.5.1",
+  "description": "Protocol-agnostic multi-device dashboard with persistent light and dark themes for three-phase energy monitoring.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Communications Framework"
+  "buildName": "Appearance & User Experience"
 }

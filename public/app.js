@@ -6,6 +6,27 @@ const params = new URLSearchParams(window.location.search);
 const selectedDeviceId = params.get('deviceId');
 let chart;
 
+function chartThemeColours() {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    text: styles.getPropertyValue('--text').trim() || '#334155',
+    muted: styles.getPropertyValue('--muted').trim() || '#64748b',
+    border: styles.getPropertyValue('--border').trim() || '#e2e8f0'
+  };
+}
+
+function applyChartTheme() {
+  if (!chart) return;
+  const colours = chartThemeColours();
+  chart.options.plugins.legend.labels.color = colours.text;
+  chart.options.scales.x.ticks.color = colours.muted;
+  chart.options.scales.x.grid.color = colours.border;
+  chart.options.scales.y.ticks.color = colours.muted;
+  chart.options.scales.y.grid.color = colours.border;
+  chart.options.scales.y.title.color = colours.text;
+  chart.update('none');
+}
+
 function apiUrl(path, extraParams = {}) {
   const query = new URLSearchParams(extraParams);
   if (selectedDeviceId) query.set('deviceId', selectedDeviceId);
@@ -92,6 +113,7 @@ async function loadSummary() {
 
 function buildChart(historyRows) {
   const context = byId('powerChart');
+  const themeColours = chartThemeColours();
   const labels = historyRows.map((row) => new Date(row.ts).toLocaleTimeString([], {
     hour: '2-digit', minute: '2-digit'
   }));
@@ -111,10 +133,10 @@ function buildChart(historyRows) {
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { color: '#334155' } } },
+      plugins: { legend: { labels: { color: themeColours.text } } },
       scales: {
-        x: { ticks: { color: '#64748b', maxTicksLimit: 12 }, grid: { color: '#e2e8f0' } },
-        y: { ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' }, title: { display: true, text: 'kW', color: '#475569' } }
+        x: { ticks: { color: themeColours.muted, maxTicksLimit: 12 }, grid: { color: themeColours.border } },
+        y: { ticks: { color: themeColours.muted }, grid: { color: themeColours.border }, title: { display: true, text: 'kW', color: themeColours.text } }
       }
     }
   });
@@ -226,3 +248,5 @@ initialise().catch((error) => {
   setConnection(false);
   setPageError(`Unable to load this device: ${error.message}`);
 });
+
+window.addEventListener('uwc-theme-change', applyChartTheme);

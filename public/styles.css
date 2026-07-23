@@ -37,7 +37,10 @@ a { color: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 32px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 18px max(32px, calc((100vw - 1440px) / 2 + 32px));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -77,7 +80,10 @@ a { color: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 28px;
-  padding: 34px 32px 30px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 34px max(32px, calc((100vw - 1440px) / 2 + 32px)) 30px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -313,4 +319,191 @@ canvas { width: 100% !important; height: 100% !important; }
   .overview-grid { grid-template-columns: 1fr; }
   .panel { padding: 18px; }
   .panel-heading { align-items: flex-start; flex-direction: column; }
+}
+
+/* v1.5.1 theme controls */
+.detail-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.theme-control {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  color: var(--primary-dark);
+}
+
+.theme-toggle {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.theme-toggle-track {
+  position: relative;
+  display: block;
+  width: 76px;
+  height: 34px;
+  border: 2px solid currentColor;
+  border-radius: 14px;
+  background: rgba(11, 99, 206, 0.05);
+  transition: background 220ms ease, border-color 220ms ease;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 27px;
+  height: 24px;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  transform: translateX(0);
+  transition: transform 220ms ease;
+}
+
+[data-theme="dark"] .theme-toggle-thumb { transform: translateX(41px); }
+
+.theme-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: opacity 160ms ease, transform 220ms ease;
+}
+
+.theme-icon-sun {
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow:
+    0 -7px 0 -4px currentColor,
+    0 7px 0 -4px currentColor,
+    7px 0 0 -4px currentColor,
+    -7px 0 0 -4px currentColor,
+    5px 5px 0 -4px currentColor,
+    -5px -5px 0 -4px currentColor,
+    5px -5px 0 -4px currentColor,
+    -5px 5px 0 -4px currentColor;
+}
+
+.theme-icon-moon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.86);
+}
+
+[data-theme="dark"] .theme-icon-sun {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.8);
+}
+
+[data-theme="dark"] .theme-icon-moon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.theme-toggle-label {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid rgba(11, 99, 206, 0.24);
+  outline-offset: 4px;
+  border-radius: 15px;
+}
+
+html,
+body,
+.detail-shell,
+.detail-nav,
+.device-header,
+.status-card,
+.overview-card,
+.panel,
+.phase-card,
+.detail-footer,
+.back-button,
+.version-chip {
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+[data-theme="dark"] {
+  --primary: #4ca3ff;
+  --primary-dark: #74b8ff;
+  --background: #08182e;
+  --surface: #102944;
+  --surface-soft: #0c223a;
+  --text: #f2f6fa;
+  --muted: #b9c7d6;
+  --border: #294762;
+  --shadow: 0 14px 35px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .version-chip {
+  color: #d8ebff;
+  background: #153451;
+}
+
+[data-theme="dark"] .back-button {
+  color: #d8ebff;
+  background: #0c223a;
+}
+
+[data-theme="dark"] .overview-card.featured {
+  border-color: #365f84;
+  background: linear-gradient(145deg, #153451, #102944);
+}
+
+[data-theme="dark"] .measurement-list div {
+  border-bottom-color: #203f5c;
+}
+
+[data-theme="dark"] .page-message {
+  color: #ffd6da;
+  background: #401d28;
+  border-color: #7c3444;
+}
+
+[data-theme="dark"] .theme-toggle-track {
+  background: rgba(76, 163, 255, 0.08);
+}
+
+@media (max-width: 620px) {
+  .detail-nav {
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .detail-nav-actions {
+    align-items: flex-end;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .theme-control {
+    justify-items: end;
+  }
+}
+
+
+/* Full-width device header with content aligned to the detail layout. */
+@media (max-width: 560px) {
+  .detail-nav,
+  .device-header {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
 }

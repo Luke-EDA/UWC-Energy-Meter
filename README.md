@@ -2,7 +2,7 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.0: Communications Framework
+## Version 1.5.1: Appearance & User Experience
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 
@@ -50,3 +50,7 @@ The authenticated `POST /api/readings` endpoint remains available for testing an
 ## Important electrical note
 
 This software assumes that the PCB and firmware perform safe isolation, calibration, and validation before transmitting readings. Work on mains circuits must be done by competent electrical professionals and comply with applicable wiring and safety standards.
+
+## Appearance themes
+
+Version 1.5.1 adds a **Toggle Dark Mode** control in the upper-right of both the dashboard and device details page. The existing interface remains the Light theme. Dark mode uses a very dark blue (`#08182E`) background with contrasting cards and text. The selected theme is stored locally in the browser and persists through navigation, refreshes, Back/Forward actions and browser restarts.

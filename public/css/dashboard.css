@@ -466,3 +466,200 @@ a {
   .right-actions { width: 100%; }
   .split-actions > button, .right-actions button { width: 100%; }
 }
+
+/* v1.5.1 theme controls */
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+}
+
+.theme-control {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: #ffffff;
+}
+
+.theme-toggle {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.theme-toggle-track {
+  position: relative;
+  display: block;
+  width: 84px;
+  height: 38px;
+  border: 2px solid currentColor;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 220ms ease, border-color 220ms ease;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 28px;
+  height: 26px;
+  border: 2px solid currentColor;
+  border-radius: 9px;
+  transform: translateX(0);
+  transition: transform 220ms ease;
+}
+
+[data-theme="dark"] .theme-toggle-thumb {
+  transform: translateX(44px);
+}
+
+.theme-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: opacity 160ms ease, transform 220ms ease;
+}
+
+.theme-icon-sun {
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow:
+    0 -8px 0 -4px currentColor,
+    0 8px 0 -4px currentColor,
+    8px 0 0 -4px currentColor,
+    -8px 0 0 -4px currentColor,
+    6px 6px 0 -4px currentColor,
+    -6px -6px 0 -4px currentColor,
+    6px -6px 0 -4px currentColor,
+    -6px 6px 0 -4px currentColor;
+}
+
+.theme-icon-moon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.86);
+}
+
+[data-theme="dark"] .theme-icon-sun {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.8);
+}
+
+[data-theme="dark"] .theme-icon-moon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.theme-toggle-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 5px;
+  border-radius: 16px;
+}
+
+html,
+body,
+.topbar,
+.footer,
+.summary-card,
+.device-card,
+.modal,
+.modal-card,
+.form-field input,
+.form-field select,
+.icon-button,
+.secondary-button,
+.settings-button {
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+[data-theme="dark"] {
+  --primary: #4ca3ff;
+  --primary-dark: #2f83d9;
+  --background: #08182e;
+  --card: #102944;
+  --text: #f2f6fa;
+  --muted: #b9c7d6;
+  --border: #294762;
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .topbar {
+  background: linear-gradient(135deg, #071426, #0b294a);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .device-card,
+[data-theme="dark"] .modal,
+[data-theme="dark"] .modal-card {
+  background: var(--card);
+}
+
+[data-theme="dark"] .device-card.is-disabled {
+  background: #0c223a;
+}
+
+[data-theme="dark"] .device-card-link:hover {
+  background: rgba(76, 163, 255, 0.055);
+}
+
+[data-theme="dark"] .device-card:hover {
+  border-color: rgba(76, 163, 255, 0.55);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+}
+
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .icon-button,
+[data-theme="dark"] .secondary-button,
+[data-theme="dark"] .settings-button {
+  color: var(--text);
+  background: #0c223a;
+  border-color: #365670;
+}
+
+[data-theme="dark"] .form-field input::placeholder {
+  color: #8296aa;
+}
+
+[data-theme="dark"] .modal::backdrop {
+  background: rgba(1, 8, 18, 0.78);
+}
+
+[data-theme="dark"] .footer {
+  color: #dbe8f7;
+  background: #061222;
+}
+
+[data-theme="dark"] .status.disabled {
+  color: #9bacc0;
+}
+
+@media (max-width: 720px) {
+  .topbar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .theme-control {
+    justify-items: start;
+  }
+}

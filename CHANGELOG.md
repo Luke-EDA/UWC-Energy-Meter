@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.1 - Appearance & User Experience
+
+- Added a persistent **Toggle Dark Mode** control to the dashboard and device details page.
+- Added sun and moon motifs based on the approved industrial switch concept.
+- Added a dark blue theme using `#08182E` as the main page background.
+- Added high-contrast dark-theme cards, forms, dialogs, navigation, status panels, tables and chart styling.
+- Stored the selected theme in browser `localStorage`.
+- Applied the selected theme before page rendering to prevent a light-theme flash.
+- Preserved the theme across device-card navigation, dashboard back navigation, browser Back/Forward, refreshes and browser restarts.
+- Kept the existing colour scheme unchanged as the official Light mode.
+
 ## 1.5.0 - Communications Framework
 
 ### Added
