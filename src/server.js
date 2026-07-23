@@ -201,15 +201,23 @@ function getDevicesApi() {
 
         type: device.type,
 
-        averageVoltage: device.data.averageVoltage,
+        ipAddress: device.ipAddress,
 
-        totalCurrent: device.data.totalCurrent,
+        port: device.port,
 
-        totalPower: device.data.totalPower,
+        slaveId: device.slaveId,
 
-        frequency: device.data.frequency,
+        pollInterval: device.pollInterval,
 
-        lastUpdate: device.data.timestamp
+        averageVoltage: device.data?.averageVoltage ?? null,
+
+        totalCurrent: device.data?.totalCurrent ?? null,
+
+        totalPower: device.data?.totalPower ?? null,
+
+        frequency: device.data?.frequency ?? null,
+
+        lastUpdate: device.data?.timestamp ?? null
 
     }));
 
@@ -238,6 +246,25 @@ app.get('/api/devices', async () => {
 
     return getDevicesApi();
 
+});
+
+app.post('/api/devices', async (request, reply) => {
+  try {
+    const device = deviceManager.addDevice(request.body || {});
+    reply.code(201);
+    return {
+      id: device.id,
+      name: device.name,
+      enabled: device.enabled,
+      type: device.type,
+      ipAddress: device.ipAddress,
+      port: device.port,
+      slaveId: device.slaveId,
+      pollInterval: device.pollInterval
+    };
+  } catch (err) {
+    reply.code(400).send({ error: err.message });
+  }
 });
 app.get('/api/latest', async (request) => rowToApi(await latestReading(request.query.deviceId || 'uwc-meter-001')));
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', Number(request.query.hours || 24)));
@@ -269,6 +296,8 @@ if (ENABLE_SIMULATOR) {
         const devices = deviceManager.getDevices();
 
         for (const device of devices) {
+
+            if (!device.enabled || !device.data) continue;
 
             const data = device.data;
 

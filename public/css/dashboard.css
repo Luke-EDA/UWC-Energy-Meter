@@ -347,3 +347,89 @@ a {
     text-align: left;
   }
 }
+
+.modal-heading,
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modal-heading { margin-bottom: 22px; }
+.modal-heading h2 { margin: 0; }
+
+.icon-button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-field { display: grid; gap: 7px; }
+.form-field-wide { grid-column: 1 / -1; }
+.form-field > span,
+.checkbox-field > span { font-weight: 700; }
+.form-field small { color: var(--muted); }
+
+.form-field input,
+.form-field select {
+  width: 100%;
+  border: 1px solid #cbd5df;
+  border-radius: 9px;
+  padding: 11px 12px;
+  color: var(--text);
+  background: #fff;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  outline: 3px solid rgba(11, 99, 206, 0.16);
+  border-color: var(--primary);
+}
+
+.input-with-unit { display: flex; align-items: center; gap: 10px; }
+.input-with-unit input { flex: 1; }
+.input-with-unit span { color: var(--muted); font-weight: 700; }
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.checkbox-field input { width: 18px; height: 18px; accent-color: var(--primary); }
+
+.form-message { min-height: 24px; margin: 18px 0 8px; color: var(--muted); }
+.form-message.error { color: var(--danger); }
+.form-message.success { color: var(--success); }
+
+.modal-actions { justify-content: flex-end; margin-top: 18px; }
+.secondary-button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 18px;
+  color: var(--text);
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.primary-button:disabled { opacity: 0.65; cursor: wait; transform: none; }
+
+@media (max-width: 520px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-field-wide { grid-column: auto; }
+  .modal-actions { align-items: stretch; flex-direction: column-reverse; }
+  .modal-actions button { width: 100%; }
+}

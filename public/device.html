@@ -1,68 +1,145 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>UWC Energy Meter Dashboard</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="UWC Energy Monitor device details">
+  <title>Device Details · UWC Energy Monitor</title>
+  <link rel="stylesheet" href="/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>UWC Energy Meter</h1>
-      <p>Three-phase live voltage, current, wattage and consumption monitoring</p>
-    </div>
-    <div class="status-card">
-      <span id="connectionDot" class="dot warn"></span>
-      <span id="connectionText">Connecting...</span>
-    </div>
-  </header>
+  <div class="detail-shell">
+    <nav class="detail-nav" aria-label="Device navigation">
+      <a class="back-button" href="/" aria-label="Back to dashboard">← Back to Dashboard</a>
+      <div class="version-chip">v1.4.0</div>
+    </nav>
 
-  <main>
-    <section class="cards">
-      <div class="card"><span>Neutral</span><strong id="neutralStatus">--</strong></div>
-      <div class="card"><span>Total live power</span><strong id="totalKw">-- kW</strong></div>
-      <div class="card"><span>Frequency</span><strong id="frequency">-- Hz</strong></div>
-      <div class="card"><span>Last update</span><strong id="lastUpdate">--</strong></div>
-    </section>
-
-    <section class="panel">
-      <h2>Live Line Readings</h2>
-      <div class="table-wrap">
-        <table id="liveTable">
-          <thead>
-            <tr>
-              <th>Line</th><th>Voltage</th><th>Current</th><th>Power Now</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Live 1</td><td id="l1v">-- V</td><td id="l1c">-- A</td><td id="l1p">-- kW</td></tr>
-            <tr><td>Live 2</td><td id="l2v">-- V</td><td id="l2c">-- A</td><td id="l2p">-- kW</td></tr>
-            <tr><td>Live 3</td><td id="l3v">-- V</td><td id="l3c">-- A</td><td id="l3p">-- kW</td></tr>
-          </tbody>
-        </table>
+    <header class="device-header">
+      <div>
+        <p class="eyebrow">Device Details</p>
+        <h1 id="deviceName">Loading device…</h1>
+        <p class="device-subtitle">Three-phase live monitoring and energy history</p>
       </div>
-    </section>
-
-    <section class="panel">
-      <h2>Energy Consumption Summary</h2>
-      <div class="table-wrap">
-        <table id="summaryTable">
-          <thead><tr><th>Period</th><th>Live 1</th><th>Live 2</th><th>Live 3</th><th>Total</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <div class="status-card" aria-live="polite">
+        <span id="connectionDot" class="dot warn"></span>
+        <div>
+          <strong id="connectionText">Connecting…</strong>
+          <span id="headerLastUpdate">Last update --:--:--</span>
+        </div>
       </div>
-    </section>
+    </header>
 
-    <section class="panel chart-panel">
-      <div class="chart-heading">
-        <h2>24-Hour Power Consumption Graph</h2>
-        <p>Latest reading appears at the far-right point.</p>
-      </div>
-      <canvas id="powerChart"></canvas>
-    </section>
-  </main>
+    <main class="detail-content">
+      <section class="overview-grid" aria-label="Device overview">
+        <article class="overview-card">
+          <span>Neutral</span>
+          <strong id="neutralStatus">--</strong>
+        </article>
+        <article class="overview-card featured">
+          <span>Total Power</span>
+          <strong id="totalKw">-- kW</strong>
+        </article>
+        <article class="overview-card">
+          <span>Frequency</span>
+          <strong id="frequency">-- Hz</strong>
+        </article>
+        <article class="overview-card">
+          <span>Power Factor</span>
+          <strong id="powerFactor">--</strong>
+        </article>
+        <article class="overview-card">
+          <span>Last Update</span>
+          <strong id="lastUpdate">--:--:--</strong>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Live measurements</p>
+            <h2>Phase Readings</h2>
+          </div>
+        </div>
+
+        <div class="phase-grid">
+          <article class="phase-card phase-l1">
+            <div class="phase-title">
+              <span>Phase</span>
+              <strong>L1</strong>
+            </div>
+            <dl class="measurement-list">
+              <div><dt>Voltage</dt><dd id="l1v">-- V</dd></div>
+              <div><dt>Current</dt><dd id="l1c">-- A</dd></div>
+              <div><dt>Power</dt><dd id="l1p">-- kW</dd></div>
+            </dl>
+          </article>
+
+          <article class="phase-card phase-l2">
+            <div class="phase-title">
+              <span>Phase</span>
+              <strong>L2</strong>
+            </div>
+            <dl class="measurement-list">
+              <div><dt>Voltage</dt><dd id="l2v">-- V</dd></div>
+              <div><dt>Current</dt><dd id="l2c">-- A</dd></div>
+              <div><dt>Power</dt><dd id="l2p">-- kW</dd></div>
+            </dl>
+          </article>
+
+          <article class="phase-card phase-l3">
+            <div class="phase-title">
+              <span>Phase</span>
+              <strong>L3</strong>
+            </div>
+            <dl class="measurement-list">
+              <div><dt>Voltage</dt><dd id="l3v">-- V</dd></div>
+              <div><dt>Current</dt><dd id="l3c">-- A</dd></div>
+              <div><dt>Power</dt><dd id="l3p">-- kW</dd></div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Calculated consumption</p>
+            <h2>Energy Summary</h2>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="summaryTable">
+            <thead>
+              <tr><th>Period</th><th>L1</th><th>L2</th><th>L3</th><th>Total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-heading chart-heading">
+          <div>
+            <p class="eyebrow">Historical trend</p>
+            <h2>24-Hour Power Graph</h2>
+          </div>
+          <p>Latest reading appears at the far right.</p>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="powerChart"></canvas>
+        </div>
+      </section>
+
+      <div id="pageMessage" class="page-message" role="alert" hidden></div>
+    </main>
+
+    <footer class="detail-footer">
+      <strong>UWC Energy Monitor</strong>
+      <span>Version 1.4.0 · Device Details</span>
+      <span>Simulator Backend · SQLite Connected</span>
+    </footer>
+  </div>
 
   <script src="/app.js"></script>
 </body>
