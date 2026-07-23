@@ -21,21 +21,11 @@
   },
   {
     "id": 3,
-    "name": "Office Block",
+    "name": "Winepress 1",
     "type": "dummy",
     "ipAddress": "192.168.1.102",
     "port": 502,
     "slaveId": 3,
-    "pollInterval": 1000,
-    "enabled": true
-  },
-  {
-    "id": 4,
-    "name": "Winepress 1",
-    "type": "dummy",
-    "ipAddress": "192.168.1.450",
-    "port": 502,
-    "slaveId": 1,
     "pollInterval": 1000,
     "enabled": true
   }

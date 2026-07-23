@@ -266,6 +266,25 @@ app.post('/api/devices', async (request, reply) => {
     reply.code(400).send({ error: err.message });
   }
 });
+
+app.put('/api/devices/:id', async (request, reply) => {
+  try {
+    return deviceManager.updateDevice(request.params.id, request.body || {});
+  } catch (err) {
+    const status = err.message === 'Device not found.' ? 404 : 400;
+    reply.code(status).send({ error: err.message });
+  }
+});
+
+app.delete('/api/devices/:id', async (request, reply) => {
+  try {
+    const device = deviceManager.removeDevice(request.params.id);
+    return { ok: true, device };
+  } catch (err) {
+    const status = err.message === 'Device not found.' ? 404 : 400;
+    reply.code(status).send({ error: err.message });
+  }
+});
 app.get('/api/latest', async (request) => rowToApi(await latestReading(request.query.deviceId || 'uwc-meter-001')));
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', Number(request.query.hours || 24)));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));

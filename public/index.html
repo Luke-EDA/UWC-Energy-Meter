@@ -16,39 +16,21 @@
       </div>
       <div class="build-badge" aria-label="Development build">
         <span>Development Build</span>
-        <strong>v1.4.0</strong>
+        <strong>v1.4.1</strong>
       </div>
     </header>
 
     <main class="content">
       <section class="summary-grid" aria-label="System summary">
-        <article class="summary-card">
-          <span class="summary-label">Devices</span>
-          <strong id="deviceCount" class="summary-value">--</strong>
-        </article>
-        <article class="summary-card">
-          <span class="summary-label">Online</span>
-          <strong id="onlineCount" class="summary-value">--</strong>
-        </article>
-        <article class="summary-card">
-          <span class="summary-label">Power</span>
-          <strong id="totalPower" class="summary-value">-- kW</strong>
-        </article>
-        <article class="summary-card">
-          <span class="summary-label">Voltage</span>
-          <strong id="averageVoltage" class="summary-value">-- V</strong>
-        </article>
-        <article class="summary-card">
-          <span class="summary-label">Last Update</span>
-          <strong id="lastUpdate" class="summary-value summary-time">--:--:--</strong>
-        </article>
+        <article class="summary-card"><span class="summary-label">Devices</span><strong id="deviceCount" class="summary-value">--</strong></article>
+        <article class="summary-card"><span class="summary-label">Online</span><strong id="onlineCount" class="summary-value">--</strong></article>
+        <article class="summary-card"><span class="summary-label">Power</span><strong id="totalPower" class="summary-value">-- kW</strong></article>
+        <article class="summary-card"><span class="summary-label">Voltage</span><strong id="averageVoltage" class="summary-value">-- V</strong></article>
+        <article class="summary-card"><span class="summary-label">Last Update</span><strong id="lastUpdate" class="summary-value summary-time">--:--:--</strong></article>
       </section>
 
       <section class="dashboard-actions" aria-label="Dashboard actions">
-        <div>
-          <p class="section-eyebrow">Connected equipment</p>
-          <h2>Devices</h2>
-        </div>
+        <div><p class="section-eyebrow">Connected equipment</p><h2>Devices</h2></div>
         <button id="addDeviceButton" class="primary-button" type="button">+ Add Device</button>
       </section>
 
@@ -57,78 +39,51 @@
     </main>
 
     <footer class="footer">
-      <div>
-        <strong>UWC Energy Monitor</strong>
-        <span>Version 1.4.0 · Add Device</span>
-      </div>
-      <div class="footer-status">
-        <span>Simulator Backend</span>
-        <span>SQLite Connected</span>
-        <span id="footerDeviceStatus">0 Devices Online</span>
-      </div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.4.1 · Device Configuration</span></div>
+      <div class="footer-status"><span>Simulator Backend</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
 
-  <dialog id="addDeviceDialog" class="modal">
-    <form id="addDeviceForm" class="modal-card">
+  <dialog id="deviceDialog" class="modal">
+    <form id="deviceForm" class="modal-card">
       <div class="modal-heading">
-        <div>
-          <p class="section-eyebrow">Device setup</p>
-          <h2>Add Device</h2>
-        </div>
-        <button id="cancelAddDevice" class="icon-button" type="button" aria-label="Close add device dialog">×</button>
+        <div><p id="dialogEyebrow" class="section-eyebrow">Device setup</p><h2 id="dialogTitle">Add Device</h2></div>
+        <button id="closeDeviceDialog" class="icon-button" type="button" aria-label="Close device dialog">×</button>
       </div>
 
       <div class="form-grid">
-        <label class="form-field form-field-wide">
-          <span>Device Name</span>
-          <input id="deviceNameInput" name="name" type="text" minlength="2" maxlength="80" placeholder="e.g. Generator Room" required>
-        </label>
-
-        <label class="form-field form-field-wide">
-          <span>Device Type</span>
-          <select name="type" required>
-            <option value="dummy">Dummy Simulator</option>
-          </select>
-        </label>
-
-        <label class="form-field form-field-wide">
-          <span>IP Address or Host Name</span>
-          <input name="ipAddress" type="text" placeholder="e.g. 192.168.1.103">
-          <small>Optional while using the simulator.</small>
-        </label>
-
-        <label class="form-field">
-          <span>TCP Port</span>
-          <input name="port" type="number" min="1" max="65535" value="502" required>
-        </label>
-
-        <label class="form-field">
-          <span>Modbus Slave ID</span>
-          <input name="slaveId" type="number" min="1" max="247" value="1" required>
-        </label>
-
-        <label class="form-field form-field-wide">
-          <span>Poll Interval</span>
-          <div class="input-with-unit">
-            <input name="pollInterval" type="number" min="250" max="60000" step="250" value="1000" required>
-            <span>ms</span>
-          </div>
-        </label>
-
-        <label class="checkbox-field form-field-wide">
-          <input name="enabled" type="checkbox" checked>
-          <span>Enable this device immediately</span>
-        </label>
+        <label class="form-field form-field-wide"><span>Device Name</span><input id="deviceNameInput" name="name" type="text" minlength="2" maxlength="80" placeholder="e.g. Generator Room" required></label>
+        <label class="form-field form-field-wide"><span>Device Type</span><select name="type" required><option value="dummy">Dummy Simulator</option></select></label>
+        <label class="form-field form-field-wide"><span>IP Address or Host Name</span><input name="ipAddress" type="text" placeholder="e.g. 192.168.1.103"><small>Optional while using the simulator.</small></label>
+        <label class="form-field"><span>TCP Port</span><input name="port" type="number" min="1" max="65535" value="502" required></label>
+        <label class="form-field"><span>Modbus Slave ID</span><input name="slaveId" type="number" min="1" max="247" value="1" required></label>
+        <label class="form-field form-field-wide"><span>Poll Interval</span><div class="input-with-unit"><input name="pollInterval" type="number" min="250" max="60000" step="250" value="1000" required><span>ms</span></div></label>
+        <label class="checkbox-field form-field-wide"><input name="enabled" type="checkbox" checked><span id="enabledLabel">Enable this device immediately</span></label>
       </div>
 
-      <div id="addDeviceMessage" class="form-message" role="status" aria-live="polite"></div>
-
-      <div class="modal-actions">
-        <button class="secondary-button" type="button" onclick="document.getElementById('addDeviceDialog').close()">Cancel</button>
-        <button id="saveDeviceButton" class="primary-button" type="submit">Save Device</button>
+      <div id="deviceMessage" class="form-message" role="status" aria-live="polite"></div>
+      <div class="modal-actions split-actions">
+        <button id="deleteDeviceButton" class="danger-button" type="button" hidden>Delete Device</button>
+        <div class="right-actions">
+          <button id="cancelDevice" class="secondary-button" type="button">Cancel</button>
+          <button id="saveDeviceButton" class="primary-button" type="submit">Save Device</button>
+        </div>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="deleteDialog" class="modal">
+    <div class="modal-card confirmation-card">
+      <p class="section-eyebrow">Confirmation required</p>
+      <h2>Delete Device?</h2>
+      <p>You are about to remove <strong id="deleteDeviceName"></strong>.</p>
+      <p>This removes the device configuration. Existing historical readings are retained.</p>
+      <div id="deleteMessage" class="form-message" role="status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button id="cancelDelete" class="secondary-button" type="button">Cancel</button>
+        <button id="confirmDelete" class="danger-button" type="button">Delete Device</button>
+      </div>
+    </div>
   </dialog>
 
   <script src="/js/dashboard.js" defer></script>

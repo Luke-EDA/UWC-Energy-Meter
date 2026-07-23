@@ -31,6 +31,7 @@ class DeviceManager {
 
   createRuntimeDevice(device) {
     const provider = new DummyProvider(device.name);
+    const enabled = device.enabled !== false;
     return {
       id: Number(device.id),
       name: String(device.name),
@@ -39,9 +40,9 @@ class DeviceManager {
       port: Number(device.port || 502),
       slaveId: Number(device.slaveId || 1),
       pollInterval: Number(device.pollInterval || 1000),
-      enabled: device.enabled !== false,
+      enabled,
       provider,
-      latestData: device.enabled === false ? null : provider.update()
+      latestData: enabled ? provider.update() : null
     };
   }
 
@@ -67,12 +68,16 @@ class DeviceManager {
   }
 
   getDevice(id) {
-    const device = this.devices.find((candidate) => candidate.id === Number(id));
+    const device = this.findRuntimeDevice(id);
     return device ? this.toPublicDevice(device) : null;
   }
 
+  findRuntimeDevice(id) {
+    return this.devices.find((candidate) => candidate.id === Number(id));
+  }
+
   addDevice(input) {
-    const device = this.validateNewDevice(input);
+    const device = this.validateDevice(input);
     const nextId = this.devices.reduce((highest, item) => Math.max(highest, item.id), 0) + 1;
     const runtimeDevice = this.createRuntimeDevice({ ...device, id: nextId });
     this.devices.push(runtimeDevice);
@@ -80,7 +85,38 @@ class DeviceManager {
     return this.toPublicDevice(runtimeDevice);
   }
 
-  validateNewDevice(input = {}) {
+  updateDevice(id, input) {
+    const existing = this.findRuntimeDevice(id);
+    if (!existing) throw new Error('Device not found.');
+
+    const updated = this.validateDevice(input, existing.id);
+    const shouldRecreateProvider = existing.name !== updated.name || existing.type !== updated.type;
+
+    existing.name = updated.name;
+    existing.type = updated.type;
+    existing.ipAddress = updated.ipAddress;
+    existing.port = updated.port;
+    existing.slaveId = updated.slaveId;
+    existing.pollInterval = updated.pollInterval;
+    existing.enabled = updated.enabled;
+
+    if (shouldRecreateProvider) existing.provider = new DummyProvider(existing.name);
+    existing.latestData = existing.enabled ? existing.provider.update() : null;
+
+    this.saveDevices();
+    return this.toPublicDevice(existing);
+  }
+
+  removeDevice(id) {
+    const index = this.devices.findIndex((candidate) => candidate.id === Number(id));
+    if (index === -1) throw new Error('Device not found.');
+
+    const [removed] = this.devices.splice(index, 1);
+    this.saveDevices();
+    return this.toPublicDevice(removed);
+  }
+
+  validateDevice(input = {}, excludedId = null) {
     const name = String(input.name || '').trim();
     const type = String(input.type || 'dummy').trim().toLowerCase();
     const ipAddress = String(input.ipAddress || '').trim();
@@ -92,11 +128,11 @@ class DeviceManager {
     if (name.length < 2 || name.length > 80) {
       throw new Error('Device name must be between 2 and 80 characters.');
     }
-    if (this.devices.some((device) => device.name.toLowerCase() === name.toLowerCase())) {
+    if (this.devices.some((device) => device.id !== excludedId && device.name.toLowerCase() === name.toLowerCase())) {
       throw new Error('A device with this name already exists.');
     }
     if (type !== 'dummy') {
-      throw new Error('Only the Dummy Simulator device type is available in version 1.4.0.');
+      throw new Error('Only the Dummy Simulator device type is available in version 1.4.1.');
     }
     if (ipAddress && !/^([a-z0-9-]+\.)*[a-z0-9-]+$/i.test(ipAddress) && !/^\d{1,3}(\.\d{1,3}){3}$/.test(ipAddress)) {
       throw new Error('Enter a valid IP address or host name.');

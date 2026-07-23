@@ -1,6 +1,6 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Web-based multi-device dashboard and ingestion API for three-phase energy monitoring.",
   "main": "src/server.js",
   "scripts": {
@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Add Device"
+  "buildName": "Device Configuration"
 }

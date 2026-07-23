@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.1 - Device Configuration
+
+### Added
+- Settings control on every device card.
+- Reusable device form for editing existing configuration.
+- Enable and disable control with a distinct Disabled state and No live data message.
+- Confirmed device removal while retaining existing historical readings.
+- `PUT /api/devices/:id` and `DELETE /api/devices/:id` endpoints.
+
+### Changed
+- Disabled devices remain visible on the dashboard but are excluded from live totals and simulator updates.
+- Device configuration changes persist in `src/config/devices.json`.
+- Updated application version and build metadata to 1.4.1 / Device Configuration.
+
 ## 1.4.0 - Add Device
 
 ### Added

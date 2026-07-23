@@ -433,3 +433,36 @@ a {
   .modal-actions { align-items: stretch; flex-direction: column-reverse; }
   .modal-actions button { width: 100%; }
 }
+
+.device-card { padding: 0; overflow: hidden; cursor: default; }
+.device-card:hover { transform: none; }
+.device-card-header { padding: 22px 22px 17px; }
+.device-card-controls { display: flex; align-items: center; gap: 11px; }
+.device-card-link { display: block; padding: 0 22px 22px; color: inherit; text-decoration: none; }
+.device-card-link:hover { background: rgba(11, 99, 206, 0.025); }
+.settings-button {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  color: var(--muted); font-size: 1rem; cursor: pointer;
+}
+.settings-button:hover { color: var(--primary); border-color: rgba(11, 99, 206, 0.4); }
+.settings-button:focus-visible { outline: 3px solid rgba(11, 99, 206, 0.2); outline-offset: 2px; }
+.status.disabled { color: #6b7280; }
+.device-card.is-disabled { background: #f8fafc; }
+.disabled-message { min-height: 128px; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+.split-actions { justify-content: space-between; }
+.right-actions { display: flex; gap: 12px; }
+.danger-button {
+  border: 1px solid var(--danger); border-radius: 10px; padding: 11px 18px;
+  color: #fff; background: var(--danger); font-weight: 700; cursor: pointer;
+}
+.danger-button:hover { background: #b42331; }
+.danger-button:disabled { opacity: 0.65; cursor: wait; }
+.confirmation-card { width: min(470px, calc(100vw - 40px)); }
+.confirmation-card h2 { margin-bottom: 14px; }
+.confirmation-card p { margin: 0 0 12px; }
+@media (max-width: 520px) {
+  .split-actions, .right-actions { align-items: stretch; flex-direction: column-reverse; }
+  .right-actions { width: 100%; }
+  .split-actions > button, .right-actions button { width: 100%; }
+}

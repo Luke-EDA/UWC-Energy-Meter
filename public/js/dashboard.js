@@ -1,6 +1,9 @@
 'use strict';
 
 const REFRESH_INTERVAL_MS = 1000;
+let devicesById = new Map();
+let editingDeviceId = null;
+let pendingDeleteDevice = null;
 
 const elements = {
   deviceCount: document.getElementById('deviceCount'),
@@ -12,11 +15,21 @@ const elements = {
   dashboardMessage: document.getElementById('dashboardMessage'),
   footerDeviceStatus: document.getElementById('footerDeviceStatus'),
   addDeviceButton: document.getElementById('addDeviceButton'),
-  addDeviceDialog: document.getElementById('addDeviceDialog'),
-  addDeviceForm: document.getElementById('addDeviceForm'),
-  cancelAddDevice: document.getElementById('cancelAddDevice'),
-  addDeviceMessage: document.getElementById('addDeviceMessage'),
-  saveDeviceButton: document.getElementById('saveDeviceButton')
+  deviceDialog: document.getElementById('deviceDialog'),
+  deviceForm: document.getElementById('deviceForm'),
+  dialogTitle: document.getElementById('dialogTitle'),
+  dialogEyebrow: document.getElementById('dialogEyebrow'),
+  closeDeviceDialog: document.getElementById('closeDeviceDialog'),
+  cancelDevice: document.getElementById('cancelDevice'),
+  deviceMessage: document.getElementById('deviceMessage'),
+  saveDeviceButton: document.getElementById('saveDeviceButton'),
+  deleteDeviceButton: document.getElementById('deleteDeviceButton'),
+  enabledLabel: document.getElementById('enabledLabel'),
+  deleteDialog: document.getElementById('deleteDialog'),
+  deleteDeviceName: document.getElementById('deleteDeviceName'),
+  cancelDelete: document.getElementById('cancelDelete'),
+  confirmDelete: document.getElementById('confirmDelete'),
+  deleteMessage: document.getElementById('deleteMessage')
 };
 
 function escapeHtml(value) {
@@ -47,14 +60,18 @@ function isDeviceOnline(device) {
 }
 
 function getLatestTimestamp(devices) {
-  const timestamps = devices.map((device) => new Date(device.lastUpdate).getTime()).filter(Number.isFinite);
+  const timestamps = devices
+    .filter((device) => device.enabled !== false)
+    .map((device) => new Date(device.lastUpdate).getTime())
+    .filter(Number.isFinite);
   return timestamps.length ? Math.max(...timestamps) : null;
 }
 
 function renderSummary(devices) {
-  const onlineDevices = devices.filter(isDeviceOnline);
-  const totalPower = devices.reduce((sum, device) => sum + Number(device.totalPower || 0), 0);
-  const validVoltages = devices.map((device) => Number(device.averageVoltage)).filter(Number.isFinite);
+  const enabledDevices = devices.filter((device) => device.enabled !== false);
+  const onlineDevices = enabledDevices.filter(isDeviceOnline);
+  const totalPower = enabledDevices.reduce((sum, device) => sum + Number(device.totalPower || 0), 0);
+  const validVoltages = enabledDevices.map((device) => Number(device.averageVoltage)).filter(Number.isFinite);
   const averageVoltage = validVoltages.length
     ? validVoltages.reduce((sum, value) => sum + value, 0) / validVoltages.length
     : 0;
@@ -72,28 +89,37 @@ function createMetricRow(label, value, className = '') {
 }
 
 function createDeviceCard(device) {
-  const online = isDeviceOnline(device);
-  const statusClass = online ? '' : 'offline';
-  const statusText = online ? 'ONLINE' : 'OFFLINE';
   const safeName = escapeHtml(device.name);
   const target = `/device.html?deviceId=${encodeURIComponent(device.name)}`;
+  const disabled = device.enabled === false;
+  const online = isDeviceOnline(device);
+  const statusClass = disabled ? 'disabled' : (online ? '' : 'offline');
+  const statusText = disabled ? 'DISABLED' : (online ? 'ONLINE' : 'OFFLINE');
 
-  return `
-    <a class="device-card" href="${target}" aria-label="Open details for ${safeName}">
-      <div class="device-card-header">
-        <h3>${safeName}</h3>
-        <span class="status ${statusClass}">${statusText}</span>
-      </div>
-      <div class="device-metrics">
+  const content = disabled
+    ? '<div class="disabled-message">No live data</div>'
+    : `<div class="device-metrics">
         ${createMetricRow('Voltage', `${formatNumber(device.averageVoltage, 1)} V`)}
         ${createMetricRow('Current', `${formatNumber(device.totalCurrent, 1)} A`)}
         ${createMetricRow('Power', `${formatNumber(device.totalPower, 2)} kW`)}
         ${createMetricRow('Last Update', formatTime(device.lastUpdate), 'last-update')}
+      </div>`;
+
+  return `
+    <article class="device-card ${disabled ? 'is-disabled' : ''}">
+      <div class="device-card-header">
+        <h3>${safeName}</h3>
+        <div class="device-card-controls">
+          <span class="status ${statusClass}">${statusText}</span>
+          <button class="settings-button" type="button" data-device-id="${device.id}" aria-label="Configure ${safeName}" title="Configure device">⚙</button>
+        </div>
       </div>
-    </a>`;
+      ${disabled ? content : `<a class="device-card-link" href="${target}" aria-label="Open details for ${safeName}">${content}</a>`}
+    </article>`;
 }
 
 function renderDevices(devices) {
+  devicesById = new Map(devices.map((device) => [Number(device.id), device]));
   elements.deviceGrid.innerHTML = devices.map(createDeviceCard).join('');
   elements.dashboardMessage.textContent = devices.length ? '' : 'No devices have been configured.';
 }
@@ -117,24 +143,45 @@ async function refreshDashboard() {
   }
 }
 
-function openAddDeviceDialog() {
-  elements.addDeviceForm.reset();
-  elements.addDeviceMessage.textContent = '';
-  elements.addDeviceMessage.classList.remove('error', 'success');
-  if (typeof elements.addDeviceDialog.showModal === 'function') {
-    elements.addDeviceDialog.showModal();
+function setDialogMode(device = null) {
+  editingDeviceId = device ? Number(device.id) : null;
+  elements.deviceForm.reset();
+  elements.deviceMessage.textContent = '';
+  elements.deviceMessage.classList.remove('error', 'success');
+
+  if (device) {
+    elements.dialogEyebrow.textContent = 'Device configuration';
+    elements.dialogTitle.textContent = 'Edit Device';
+    elements.saveDeviceButton.textContent = 'Save Changes';
+    elements.deleteDeviceButton.hidden = false;
+    elements.enabledLabel.textContent = 'Enable this device';
+    elements.deviceForm.elements.name.value = device.name;
+    elements.deviceForm.elements.type.value = device.type;
+    elements.deviceForm.elements.ipAddress.value = device.ipAddress || '';
+    elements.deviceForm.elements.port.value = device.port;
+    elements.deviceForm.elements.slaveId.value = device.slaveId;
+    elements.deviceForm.elements.pollInterval.value = device.pollInterval;
+    elements.deviceForm.elements.enabled.checked = device.enabled !== false;
+  } else {
+    elements.dialogEyebrow.textContent = 'Device setup';
+    elements.dialogTitle.textContent = 'Add Device';
+    elements.saveDeviceButton.textContent = 'Save Device';
+    elements.deleteDeviceButton.hidden = true;
+    elements.enabledLabel.textContent = 'Enable this device immediately';
+  }
+}
+
+function openDeviceDialog(device = null) {
+  setDialogMode(device);
+  if (typeof elements.deviceDialog.showModal === 'function') {
+    elements.deviceDialog.showModal();
     document.getElementById('deviceNameInput').focus();
   }
 }
 
-async function submitAddDevice(event) {
-  event.preventDefault();
-  elements.addDeviceMessage.textContent = 'Saving device…';
-  elements.addDeviceMessage.classList.remove('error', 'success');
-  elements.saveDeviceButton.disabled = true;
-
-  const formData = new FormData(elements.addDeviceForm);
-  const payload = {
+function formPayload() {
+  const formData = new FormData(elements.deviceForm);
+  return {
     name: formData.get('name'),
     type: formData.get('type'),
     ipAddress: formData.get('ipAddress'),
@@ -143,39 +190,97 @@ async function submitAddDevice(event) {
     pollInterval: Number(formData.get('pollInterval')),
     enabled: formData.get('enabled') === 'on'
   };
+}
+
+async function submitDevice(event) {
+  event.preventDefault();
+  const isEditing = editingDeviceId !== null;
+  elements.deviceMessage.textContent = isEditing ? 'Saving changes…' : 'Saving device…';
+  elements.deviceMessage.classList.remove('error', 'success');
+  elements.saveDeviceButton.disabled = true;
 
   try {
-    const response = await fetch('/api/devices', {
-      method: 'POST',
+    const response = await fetch(isEditing ? `/api/devices/${editingDeviceId}` : '/api/devices', {
+      method: isEditing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(formPayload())
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || `Unable to add device (${response.status})`);
+    if (!response.ok) throw new Error(result.error || `Unable to save device (${response.status})`);
 
-    elements.addDeviceMessage.textContent = `${result.name} was added successfully.`;
-    elements.addDeviceMessage.classList.add('success');
+    elements.deviceMessage.textContent = isEditing
+      ? `${result.name} was updated successfully.`
+      : `${result.name} was added successfully.`;
+    elements.deviceMessage.classList.add('success');
     await refreshDashboard();
-    window.setTimeout(() => elements.addDeviceDialog.close(), 650);
+    window.setTimeout(() => elements.deviceDialog.close(), 650);
   } catch (error) {
-    elements.addDeviceMessage.textContent = error.message;
-    elements.addDeviceMessage.classList.add('error');
+    elements.deviceMessage.textContent = error.message;
+    elements.deviceMessage.classList.add('error');
   } finally {
     elements.saveDeviceButton.disabled = false;
   }
 }
 
-function initialiseDialog() {
-  elements.addDeviceButton.addEventListener('click', openAddDeviceDialog);
-  elements.cancelAddDevice.addEventListener('click', () => elements.addDeviceDialog.close());
-  elements.addDeviceForm.addEventListener('submit', submitAddDevice);
-  elements.addDeviceDialog.addEventListener('click', (event) => {
-    if (event.target === elements.addDeviceDialog) elements.addDeviceDialog.close();
+function openDeleteDialog() {
+  const device = devicesById.get(editingDeviceId);
+  if (!device) return;
+  pendingDeleteDevice = device;
+  elements.deleteDeviceName.textContent = device.name;
+  elements.deleteMessage.textContent = '';
+  elements.deleteMessage.classList.remove('error');
+  elements.deviceDialog.close();
+  elements.deleteDialog.showModal();
+}
+
+async function confirmDeleteDevice() {
+  if (!pendingDeleteDevice) return;
+  elements.confirmDelete.disabled = true;
+  elements.deleteMessage.textContent = 'Removing device…';
+
+  try {
+    const response = await fetch(`/api/devices/${pendingDeleteDevice.id}`, { method: 'DELETE' });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Unable to remove device (${response.status})`);
+    elements.deleteDialog.close();
+    pendingDeleteDevice = null;
+    await refreshDashboard();
+  } catch (error) {
+    elements.deleteMessage.textContent = error.message;
+    elements.deleteMessage.classList.add('error');
+  } finally {
+    elements.confirmDelete.disabled = false;
+  }
+}
+
+function initialiseDialogs() {
+  elements.addDeviceButton.addEventListener('click', () => openDeviceDialog());
+  elements.closeDeviceDialog.addEventListener('click', () => elements.deviceDialog.close());
+  elements.cancelDevice.addEventListener('click', () => elements.deviceDialog.close());
+  elements.deviceForm.addEventListener('submit', submitDevice);
+  elements.deleteDeviceButton.addEventListener('click', openDeleteDialog);
+  elements.cancelDelete.addEventListener('click', () => {
+    elements.deleteDialog.close();
+    pendingDeleteDevice = null;
+  });
+  elements.confirmDelete.addEventListener('click', confirmDeleteDevice);
+
+  elements.deviceGrid.addEventListener('click', (event) => {
+    const button = event.target.closest('.settings-button');
+    if (!button) return;
+    const device = devicesById.get(Number(button.dataset.deviceId));
+    if (device) openDeviceDialog(device);
+  });
+
+  [elements.deviceDialog, elements.deleteDialog].forEach((dialog) => {
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
   });
 }
 
 function initialise() {
-  initialiseDialog();
+  initialiseDialogs();
   refreshDashboard();
   window.setInterval(refreshDashboard, REFRESH_INTERVAL_MS);
 }
