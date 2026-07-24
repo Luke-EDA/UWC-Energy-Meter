@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.3 - Dashboard Total Power History
+
+- Added a 24-hour Total Power History graph to the main dashboard below the summary cards and above the Devices area.
+- Added a backend endpoint that aggregates the latest reading from every measured device into one total-power value per second.
+- Added a single Total Power line without separate phase lines.
+- Made the history graph section independently collapsible with `▼` and `▶` indicators.
+- Stored the history section state in browser `localStorage`, independently of the Devices section.
+- Added responsive graph sizing, automatic history refresh, and Light/Dark theme support.
+
 ## 1.5.2 - Collapsible Device Section
 
 - Added an accessible expand/collapse control to the Devices header on the dashboard.

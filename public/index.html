@@ -7,6 +7,7 @@
   <title>UWC Energy Monitor</title>
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -31,7 +32,7 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.5.2</strong>
+          <strong>v1.5.3</strong>
         </div>
       </div>
     </header>
@@ -45,9 +46,24 @@
         <article class="summary-card"><span class="summary-label">Last Update</span><strong id="lastUpdate" class="summary-value summary-time">--:--:--</strong></article>
       </section>
 
+      <section class="history-section" aria-labelledby="historySectionTitle">
+        <button id="historySectionToggle" class="section-toggle" type="button" aria-expanded="true" aria-controls="historySectionContent">
+          <span id="historySectionIndicator" class="section-toggle-indicator" aria-hidden="true">▼</span>
+          <span><span class="section-eyebrow">Combined site load</span><span id="historySectionTitle" class="section-title">Total Power History</span></span>
+        </button>
+        <div id="historySectionContent" class="collapsible-section is-expanded">
+          <div class="collapsible-section-inner">
+            <div class="history-chart-panel">
+              <div id="historyMessage" class="chart-message" role="status" aria-live="polite">Loading total power history…</div>
+              <div class="history-chart-wrap"><canvas id="totalPowerHistoryChart" aria-label="Total power history across all devices"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="dashboard-actions" aria-label="Dashboard actions">
         <button id="deviceSectionToggle" class="section-toggle" type="button" aria-expanded="true" aria-controls="deviceSectionContent">
-          <span class="section-toggle-indicator" aria-hidden="true">▼</span>
+          <span id="deviceSectionIndicator" class="section-toggle-indicator" aria-hidden="true">▼</span>
           <span><span class="section-eyebrow">Connected equipment</span><span class="section-title">Devices</span></span>
         </button>
         <button id="addDeviceButton" class="primary-button" type="button">+ Add Device</button>
@@ -62,7 +78,7 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.2 · Collapsible Device Section</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.3 · Dashboard Total Power History</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>

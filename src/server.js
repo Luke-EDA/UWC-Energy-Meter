@@ -137,6 +137,34 @@ function history(deviceId, hours = 24) {
   });
 }
 
+function totalPowerHistory(hours = 24) {
+  const safeHours = Math.min(Math.max(Number(hours) || 24, 1), 24 * 365);
+  const since = Date.now() - safeHours * 60 * 60 * 1000;
+
+  return new Promise((resolve, reject) => {
+    db.all(`WITH latest_samples AS (
+              SELECT
+                CAST(ts / 1000 AS INTEGER) AS time_bucket,
+                device_id,
+                MAX(ts) AS latest_ts
+              FROM readings
+              WHERE ts >= ?
+              GROUP BY time_bucket, device_id
+            )
+            SELECT
+              samples.time_bucket * 1000 AS ts,
+              SUM(readings.total_power_kw) AS total_power_kw
+            FROM latest_samples AS samples
+            JOIN readings
+              ON readings.device_id = samples.device_id
+             AND readings.ts = samples.latest_ts
+            GROUP BY samples.time_bucket
+            ORDER BY samples.time_bucket ASC`, [since], (err, rows) => {
+      if (err) reject(err); else resolve(rows);
+    });
+  });
+}
+
 function energySummary(deviceId = 'uwc-meter-001') {
   const periods = [
     { key: 'last24h', label: 'Last 24 hours', hours: 24 },
@@ -299,6 +327,7 @@ app.delete('/api/devices/:id', async (request, reply) => {
 });
 app.get('/api/latest', async (request) => rowToApi(await latestReading(request.query.deviceId || 'uwc-meter-001')));
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', Number(request.query.hours || 24)));
+app.get('/api/history/total-power', async (request) => totalPowerHistory(Number(request.query.hours || 24)));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));
 app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
 

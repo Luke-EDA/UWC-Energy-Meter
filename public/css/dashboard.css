@@ -99,7 +99,8 @@ a {
 }
 
 .summary-card,
-.device-card {
+.device-card,
+.history-chart-panel {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -128,6 +129,37 @@ a {
 
 .summary-time {
   font-size: clamp(1.35rem, 2vw, 1.9rem);
+}
+
+.history-section {
+  margin-top: 36px;
+}
+
+.history-chart-panel {
+  margin-top: 18px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.history-chart-wrap {
+  position: relative;
+  height: 360px;
+}
+
+.chart-message {
+  min-height: 0;
+  color: var(--muted);
+}
+
+.chart-message:not(:empty) {
+  margin-bottom: 12px;
+}
+
+.chart-message.error {
+  color: var(--danger);
 }
 
 .dashboard-actions {
@@ -726,4 +758,9 @@ body,
   .theme-control {
     justify-items: start;
   }
+}
+
+@media (max-width: 600px) {
+  .history-chart-wrap { height: 280px; }
+  .history-chart-panel { padding: 14px; }
 }

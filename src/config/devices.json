@@ -31,5 +31,16 @@
       "host": "192.168.1.102"
     },
     "providerOptions": {}
+  },
+  {
+    "id": 4,
+    "name": "test",
+    "provider": "dummy",
+    "enabled": true,
+    "pollInterval": 1000,
+    "connection": {
+      "host": ""
+    },
+    "providerOptions": {}
   }
 ]

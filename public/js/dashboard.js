@@ -2,6 +2,9 @@
 
 const REFRESH_INTERVAL_MS = 1000;
 const DEVICE_SECTION_STATE_KEY = 'uwc-device-section-collapsed';
+const HISTORY_SECTION_STATE_KEY = 'uwc-history-section-collapsed';
+const HISTORY_REFRESH_INTERVAL_MS = 5000;
+let totalPowerHistoryChart = null;
 let devicesById = new Map();
 let editingDeviceId = null;
 let pendingDeleteDevice = null;
@@ -18,7 +21,12 @@ const elements = {
   addDeviceButton: document.getElementById('addDeviceButton'),
   deviceSectionToggle: document.getElementById('deviceSectionToggle'),
   deviceSectionContent: document.getElementById('deviceSectionContent'),
-  deviceSectionIndicator: document.querySelector('.section-toggle-indicator'),
+  deviceSectionIndicator: document.getElementById('deviceSectionIndicator'),
+  historySectionToggle: document.getElementById('historySectionToggle'),
+  historySectionContent: document.getElementById('historySectionContent'),
+  historySectionIndicator: document.getElementById('historySectionIndicator'),
+  historyMessage: document.getElementById('historyMessage'),
+  totalPowerHistoryCanvas: document.getElementById('totalPowerHistoryChart'),
   deviceDialog: document.getElementById('deviceDialog'),
   deviceForm: document.getElementById('deviceForm'),
   dialogTitle: document.getElementById('dialogTitle'),
@@ -270,6 +278,143 @@ async function confirmDeleteDevice() {
   }
 }
 
+
+function chartThemeColours() {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    primary: styles.getPropertyValue('--primary').trim() || '#0b63ce',
+    text: styles.getPropertyValue('--text').trim() || '#334155',
+    muted: styles.getPropertyValue('--muted').trim() || '#64748b',
+    border: styles.getPropertyValue('--border').trim() || '#e2e8f0'
+  };
+}
+
+function formatHistoryLabel(timestamp) {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+}
+
+function buildTotalPowerHistoryChart(rows) {
+  const colours = chartThemeColours();
+  const data = rows.map((row) => Number(row.total_power_kw));
+  const labels = rows.map((row) => formatHistoryLabel(row.ts));
+
+  if (totalPowerHistoryChart) {
+    totalPowerHistoryChart.data.labels = labels;
+    totalPowerHistoryChart.data.datasets[0].data = data;
+    totalPowerHistoryChart.update('none');
+    return;
+  }
+
+  totalPowerHistoryChart = new Chart(elements.totalPowerHistoryCanvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total Power',
+        data,
+        borderColor: colours.primary,
+        backgroundColor: `${colours.primary}22`,
+        fill: true,
+        tension: 0.25,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: colours.text } },
+        tooltip: {
+          callbacks: {
+            label: (context) => `Total Power: ${Number(context.parsed.y).toFixed(2)} kW`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: colours.muted, maxTicksLimit: 12 },
+          grid: { color: colours.border }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: colours.muted },
+          grid: { color: colours.border },
+          title: { display: true, text: 'Power (kW)', color: colours.text }
+        }
+      }
+    }
+  });
+}
+
+async function refreshTotalPowerHistory() {
+  try {
+    const response = await fetch('/api/history/total-power?hours=24', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`History API returned ${response.status}`);
+    const rows = await response.json();
+    buildTotalPowerHistoryChart(rows);
+    elements.historyMessage.textContent = rows.length ? '' : 'No historical power readings are available yet.';
+    elements.historyMessage.classList.remove('error');
+  } catch (error) {
+    console.error('Unable to update total power history:', error);
+    elements.historyMessage.textContent = 'Unable to load total power history.';
+    elements.historyMessage.classList.add('error');
+  }
+}
+
+function applyTotalPowerChartTheme() {
+  if (!totalPowerHistoryChart) return;
+  const colours = chartThemeColours();
+  const dataset = totalPowerHistoryChart.data.datasets[0];
+  dataset.borderColor = colours.primary;
+  dataset.backgroundColor = `${colours.primary}22`;
+  totalPowerHistoryChart.options.plugins.legend.labels.color = colours.text;
+  totalPowerHistoryChart.options.scales.x.ticks.color = colours.muted;
+  totalPowerHistoryChart.options.scales.x.grid.color = colours.border;
+  totalPowerHistoryChart.options.scales.y.ticks.color = colours.muted;
+  totalPowerHistoryChart.options.scales.y.grid.color = colours.border;
+  totalPowerHistoryChart.options.scales.y.title.color = colours.text;
+  totalPowerHistoryChart.update('none');
+}
+
+function setHistorySectionCollapsed(collapsed, persist = true) {
+  elements.historySectionToggle.setAttribute('aria-expanded', String(!collapsed));
+  elements.historySectionContent.classList.toggle('is-expanded', !collapsed);
+  elements.historySectionIndicator.textContent = collapsed ? '▶' : '▼';
+
+  if (!collapsed && totalPowerHistoryChart) {
+    window.setTimeout(() => totalPowerHistoryChart.resize(), 230);
+  }
+
+  if (persist) {
+    try {
+      localStorage.setItem(HISTORY_SECTION_STATE_KEY, String(collapsed));
+    } catch (error) {
+      console.warn('Unable to save history section state:', error);
+    }
+  }
+}
+
+function initialiseHistorySection() {
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(HISTORY_SECTION_STATE_KEY) === 'true';
+  } catch (error) {
+    console.warn('Unable to read history section state:', error);
+  }
+
+  setHistorySectionCollapsed(collapsed, false);
+  elements.historySectionToggle.addEventListener('click', () => {
+    const isExpanded = elements.historySectionToggle.getAttribute('aria-expanded') === 'true';
+    setHistorySectionCollapsed(isExpanded);
+  });
+}
+
 function setDeviceSectionCollapsed(collapsed, persist = true) {
   elements.deviceSectionToggle.setAttribute('aria-expanded', String(!collapsed));
   elements.deviceSectionContent.classList.toggle('is-expanded', !collapsed);
@@ -326,10 +471,14 @@ function initialiseDialogs() {
 }
 
 function initialise() {
+  initialiseHistorySection();
   initialiseDeviceSection();
   initialiseDialogs();
   refreshDashboard();
+  refreshTotalPowerHistory();
   window.setInterval(refreshDashboard, REFRESH_INTERVAL_MS);
+  window.setInterval(refreshTotalPowerHistory, HISTORY_REFRESH_INTERVAL_MS);
 }
 
 document.addEventListener('DOMContentLoaded', initialise);
+window.addEventListener('uwc-theme-change', applyTotalPowerChartTheme);
