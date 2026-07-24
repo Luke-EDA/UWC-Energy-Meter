@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.2 - Collapsible Device Section
+
+- Added an accessible expand/collapse control to the Devices header on the dashboard.
+- Added clear expanded (`▼`) and collapsed (`▶`) indicators.
+- Made the full Devices heading area clickable for easier mouse and touch use.
+- Added a subtle collapse and fade transition while removing the hidden cards from the page layout.
+- Stored the selected section state in browser `localStorage` so it persists across navigation, refreshes and browser restarts.
+- Kept the Add Device action visible while the device cards are collapsed.
+- Prepared dashboard space for the next v1.5.x element.
+
 ## 1.5.1 - Appearance & User Experience
 
 - Added a persistent **Toggle Dark Mode** control to the dashboard and device details page.

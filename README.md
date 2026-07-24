@@ -2,7 +2,7 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.1: Appearance & User Experience
+## Version 1.5.2: Collapsible Device Section
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 
@@ -50,6 +50,10 @@ The authenticated `POST /api/readings` endpoint remains available for testing an
 ## Important electrical note
 
 This software assumes that the PCB and firmware perform safe isolation, calibration, and validation before transmitting readings. Work on mains circuits must be done by competent electrical professionals and comply with applicable wiring and safety standards.
+
+## Collapsible device section
+
+Version 1.5.2 makes the Devices area on the dashboard collapsible. Select the Devices heading to hide or reveal the device cards. The indicator shows `▼` while expanded and `▶` while collapsed. The selected state is stored locally in the browser and persists through navigation, refreshes and browser restarts. The Add Device action remains available in either state.
 
 ## Appearance themes
 

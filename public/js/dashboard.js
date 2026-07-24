@@ -1,6 +1,7 @@
 'use strict';
 
 const REFRESH_INTERVAL_MS = 1000;
+const DEVICE_SECTION_STATE_KEY = 'uwc-device-section-collapsed';
 let devicesById = new Map();
 let editingDeviceId = null;
 let pendingDeleteDevice = null;
@@ -15,6 +16,9 @@ const elements = {
   dashboardMessage: document.getElementById('dashboardMessage'),
   footerDeviceStatus: document.getElementById('footerDeviceStatus'),
   addDeviceButton: document.getElementById('addDeviceButton'),
+  deviceSectionToggle: document.getElementById('deviceSectionToggle'),
+  deviceSectionContent: document.getElementById('deviceSectionContent'),
+  deviceSectionIndicator: document.querySelector('.section-toggle-indicator'),
   deviceDialog: document.getElementById('deviceDialog'),
   deviceForm: document.getElementById('deviceForm'),
   dialogTitle: document.getElementById('dialogTitle'),
@@ -266,6 +270,35 @@ async function confirmDeleteDevice() {
   }
 }
 
+function setDeviceSectionCollapsed(collapsed, persist = true) {
+  elements.deviceSectionToggle.setAttribute('aria-expanded', String(!collapsed));
+  elements.deviceSectionContent.classList.toggle('is-expanded', !collapsed);
+  elements.deviceSectionIndicator.textContent = collapsed ? '▶' : '▼';
+
+  if (persist) {
+    try {
+      localStorage.setItem(DEVICE_SECTION_STATE_KEY, String(collapsed));
+    } catch (error) {
+      console.warn('Unable to save device section state:', error);
+    }
+  }
+}
+
+function initialiseDeviceSection() {
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(DEVICE_SECTION_STATE_KEY) === 'true';
+  } catch (error) {
+    console.warn('Unable to read device section state:', error);
+  }
+
+  setDeviceSectionCollapsed(collapsed, false);
+  elements.deviceSectionToggle.addEventListener('click', () => {
+    const isExpanded = elements.deviceSectionToggle.getAttribute('aria-expanded') === 'true';
+    setDeviceSectionCollapsed(isExpanded);
+  });
+}
+
 function initialiseDialogs() {
   elements.addDeviceButton.addEventListener('click', () => openDeviceDialog());
   elements.closeDeviceDialog.addEventListener('click', () => elements.deviceDialog.close());
@@ -293,6 +326,7 @@ function initialiseDialogs() {
 }
 
 function initialise() {
+  initialiseDeviceSection();
   initialiseDialogs();
   refreshDashboard();
   window.setInterval(refreshDashboard, REFRESH_INTERVAL_MS);

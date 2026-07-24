@@ -31,7 +31,7 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.5.1</strong>
+          <strong>v1.5.2</strong>
         </div>
       </div>
     </header>
@@ -46,16 +46,23 @@
       </section>
 
       <section class="dashboard-actions" aria-label="Dashboard actions">
-        <div><p class="section-eyebrow">Connected equipment</p><h2>Devices</h2></div>
+        <button id="deviceSectionToggle" class="section-toggle" type="button" aria-expanded="true" aria-controls="deviceSectionContent">
+          <span class="section-toggle-indicator" aria-hidden="true">▼</span>
+          <span><span class="section-eyebrow">Connected equipment</span><span class="section-title">Devices</span></span>
+        </button>
         <button id="addDeviceButton" class="primary-button" type="button">+ Add Device</button>
       </section>
 
-      <div id="dashboardMessage" class="message" role="status" aria-live="polite">Loading devices…</div>
-      <section id="deviceGrid" class="device-grid" aria-label="Connected devices"></section>
+      <div id="deviceSectionContent" class="collapsible-section is-expanded">
+        <div class="collapsible-section-inner">
+          <div id="dashboardMessage" class="message" role="status" aria-live="polite">Loading devices…</div>
+          <section id="deviceGrid" class="device-grid" aria-label="Connected devices"></section>
+        </div>
+      </div>
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.1 · Appearance & User Experience</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.2 · Collapsible Device Section</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
