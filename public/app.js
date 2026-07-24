@@ -4,7 +4,38 @@ const byId = (id) => document.getElementById(id);
 const fmt = (value, digits = 2) => Number(value ?? 0).toFixed(digits);
 const params = new URLSearchParams(window.location.search);
 const selectedDeviceId = params.get('deviceId');
+const PHASES = ['l1', 'l2', 'l3'];
 let chart;
+let selectedDevice;
+let phaseConfig = defaultPhaseConfig();
+let originalPhaseConfig = defaultPhaseConfig();
+let pendingPhaseConfig = null;
+
+function defaultPhaseConfig() {
+  return {
+    l1: { enabled: true, label: '' },
+    l2: { enabled: true, label: '' },
+    l3: { enabled: true, label: '' }
+  };
+}
+
+function clonePhaseConfig(config) {
+  return JSON.parse(JSON.stringify(config || defaultPhaseConfig()));
+}
+
+function normalisePhaseConfig(config) {
+  const defaults = defaultPhaseConfig();
+  return Object.fromEntries(PHASES.map((phase) => [phase, {
+    enabled: config?.[phase]?.enabled !== false,
+    label: String(config?.[phase]?.label || '').trim()
+  }]));
+}
+
+function phaseDisplayName(phase, config = phaseConfig) {
+  const phaseNumber = phase.toUpperCase();
+  const label = config[phase]?.label;
+  return label ? `${phaseNumber} - ${label}` : phaseNumber;
+}
 
 function chartThemeColours() {
   const styles = getComputedStyle(document.documentElement);
@@ -42,19 +73,18 @@ function apiUrl(path, extraParams = {}) {
   return suffix ? `${path}?${suffix}` : path;
 }
 
-async function getJson(url) {
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
+async function getJson(url, options = {}) {
+  const response = await fetch(url, { cache: 'no-store', ...options });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+  return payload;
 }
 
 function formatTime(timestamp) {
   if (!timestamp) return '--:--:--';
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return '--:--:--';
-  return date.toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
 function setConnection(ok) {
@@ -86,12 +116,32 @@ function updateDeviceName(name) {
   document.title = `${deviceName} · UWC Energy Monitor`;
 }
 
+function applyPhaseConfig(config) {
+  phaseConfig = normalisePhaseConfig(config);
+  PHASES.forEach((phase) => {
+    const enabled = phaseConfig[phase].enabled;
+    byId(`${phase}Title`).textContent = phaseDisplayName(phase);
+    byId(`${phase}SummaryHeader`).textContent = phaseDisplayName(phase);
+    byId(`${phase}Card`).classList.toggle('is-disabled', !enabled);
+    byId(`${phase}Card`).querySelector('.measurement-list').hidden = !enabled;
+    byId(`${phase}Disabled`).hidden = enabled;
+  });
+  updateChartLabels();
+}
+
+function updateChartLabels() {
+  if (!chart) return;
+  chart.data.datasets.forEach((dataset, index) => {
+    dataset.label = `${phaseDisplayName(PHASES[index])} kW`;
+  });
+  chart.update('none');
+}
+
 function updateLive(data) {
   if (!data) return;
-
   updateDeviceName(data.deviceId);
+  if (data.phaseConfig) applyPhaseConfig(data.phaseConfig);
   const lastUpdate = formatTime(data.ts);
-
   byId('neutralStatus').textContent = data.neutralPresent ? 'Present' : 'Missing';
   byId('totalKw').textContent = `${fmt(data.totalPowerKw)} kW`;
   byId('frequency').textContent = `${fmt(data.frequencyHz ?? 50, 2)} Hz`;
@@ -99,10 +149,11 @@ function updateLive(data) {
   byId('lastUpdate').textContent = lastUpdate;
   byId('headerLastUpdate').textContent = `Last update ${lastUpdate}`;
 
-  ['l1', 'l2', 'l3'].forEach((line) => {
-    byId(`${line}v`).textContent = `${fmt(data[line].voltage, 1)} V`;
-    byId(`${line}c`).textContent = `${fmt(data[line].current, 2)} A`;
-    byId(`${line}p`).textContent = `${fmt(data[line].powerKw, 3)} kW`;
+  PHASES.forEach((phase) => {
+    if (!phaseConfig[phase].enabled || !data[phase]) return;
+    byId(`${phase}v`).textContent = `${fmt(data[phase].voltage, 1)} V`;
+    byId(`${phase}c`).textContent = `${fmt(data[phase].current, 2)} A`;
+    byId(`${phase}p`).textContent = `${fmt(data[phase].powerKw, 3)} kW`;
   });
 }
 
@@ -119,22 +170,26 @@ async function loadSummary() {
     </tr>`).join('');
 }
 
-function buildChart(historyRows) {
+function buildChart(historyPayload) {
+  const historyRows = Array.isArray(historyPayload) ? historyPayload : historyPayload.rows;
   const context = byId('powerChart');
   const themeColours = chartThemeColours();
-  const labels = historyRows.map((row) => new Date(row.ts).toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit'
-  }));
+  const labels = historyRows.map((row) => new Date(row.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const colours = [themeColours.phaseL1, themeColours.phaseL2, themeColours.phaseL3];
 
   chart = new Chart(context, {
     type: 'line',
     data: {
       labels,
-      datasets: [
-        { label: 'L1 kW', data: historyRows.map((row) => row.l1_power_kw), borderColor: themeColours.phaseL1, backgroundColor: `${themeColours.phaseL1}22`, tension: 0.25, pointRadius: 1.5 },
-        { label: 'L2 kW', data: historyRows.map((row) => row.l2_power_kw), borderColor: themeColours.phaseL2, backgroundColor: `${themeColours.phaseL2}22`, tension: 0.25, pointRadius: 1.5 },
-        { label: 'L3 kW', data: historyRows.map((row) => row.l3_power_kw), borderColor: themeColours.phaseL3, backgroundColor: `${themeColours.phaseL3}22`, tension: 0.25, pointRadius: 1.5 }
-      ]
+      datasets: PHASES.map((phase, index) => ({
+        label: `${phaseDisplayName(phase)} kW`,
+        data: historyRows.map((row) => row[`${phase}_power_kw`]),
+        borderColor: colours[index],
+        backgroundColor: `${colours[index]}22`,
+        tension: 0.25,
+        pointRadius: 1.5,
+        spanGaps: false
+      }))
     },
     options: {
       responsive: true,
@@ -152,14 +207,10 @@ function buildChart(historyRows) {
 
 function pushChartPoint(data) {
   if (!chart) return;
-
-  chart.data.labels.push(new Date(data.ts).toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit'
-  }));
-  chart.data.datasets[0].data.push(data.l1PowerKw ?? data.l1?.powerKw);
-  chart.data.datasets[1].data.push(data.l2PowerKw ?? data.l2?.powerKw);
-  chart.data.datasets[2].data.push(data.l3PowerKw ?? data.l3?.powerKw);
-
+  chart.data.labels.push(new Date(data.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  PHASES.forEach((phase, index) => {
+    chart.data.datasets[index].data.push(data[`${phase}PowerKw`] ?? null);
+  });
   const maxPoints = 24 * 60 * 60;
   while (chart.data.labels.length > maxPoints) {
     chart.data.labels.shift();
@@ -175,20 +226,18 @@ function websocketUrl() {
 
 function connectWebSocket() {
   const socket = new WebSocket(websocketUrl());
-
   socket.onopen = () => setConnection(true);
-  socket.onclose = () => {
-    setConnection(false);
-    window.setTimeout(connectWebSocket, 2500);
-  };
+  socket.onclose = () => { setConnection(false); window.setTimeout(connectWebSocket, 2500); };
   socket.onerror = () => setConnection(false);
   socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
+    if (message.type === 'phase-config') {
+      if (!selectedDeviceId || message.data.deviceId === selectedDeviceId) applyPhaseConfig(message.data.phaseConfig);
+      return;
+    }
     if (message.type !== 'reading') return;
-
     const reading = message.data;
     if (selectedDeviceId && reading.deviceId !== selectedDeviceId) return;
-
     const apiShape = {
       deviceId: reading.deviceId,
       ts: reading.ts,
@@ -196,17 +245,87 @@ function connectWebSocket() {
       frequencyHz: reading.frequencyHz,
       powerFactor: reading.powerFactor,
       totalPowerKw: reading.totalPowerKw,
-      l1: { voltage: reading.l1Voltage, current: reading.l1Current, powerKw: reading.l1PowerKw },
-      l2: { voltage: reading.l2Voltage, current: reading.l2Current, powerKw: reading.l2PowerKw },
-      l3: { voltage: reading.l3Voltage, current: reading.l3Current, powerKw: reading.l3PowerKw }
+      l1: reading.l1PowerKw == null ? null : { voltage: reading.l1Voltage, current: reading.l1Current, powerKw: reading.l1PowerKw },
+      l2: reading.l2PowerKw == null ? null : { voltage: reading.l2Voltage, current: reading.l2Current, powerKw: reading.l2PowerKw },
+      l3: reading.l3PowerKw == null ? null : { voltage: reading.l3Voltage, current: reading.l3Current, powerKw: reading.l3PowerKw }
     };
-
     updateLive(apiShape);
     pushChartPoint(reading);
   };
 }
 
+function openPhaseDialog() {
+  originalPhaseConfig = clonePhaseConfig(phaseConfig);
+  PHASES.forEach((phase) => {
+    byId(`${phase}Enabled`).checked = phaseConfig[phase].enabled;
+    byId(`${phase}Label`).value = phaseConfig[phase].label;
+  });
+  byId('phaseDialogError').hidden = true;
+  byId('phaseDialog').showModal();
+}
+
+function closePhaseDialog() {
+  byId('phaseDialog').close();
+}
+
+function readPhaseForm() {
+  return Object.fromEntries(PHASES.map((phase) => [phase, {
+    enabled: byId(`${phase}Enabled`).checked,
+    label: byId(`${phase}Label`).value.trim()
+  }]));
+}
+
+async function savePhaseConfig(config) {
+  const result = await getJson(`/api/devices/${selectedDevice.id}/phases`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
+  });
+  applyPhaseConfig(result.phaseConfig);
+  originalPhaseConfig = clonePhaseConfig(result.phaseConfig);
+  pendingPhaseConfig = null;
+  closePhaseDialog();
+}
+
+async function handlePhaseSave() {
+  const nextConfig = readPhaseForm();
+  const disabled = PHASES.filter((phase) => originalPhaseConfig[phase].enabled && !nextConfig[phase].enabled);
+  if (disabled.length) {
+    pendingPhaseConfig = nextConfig;
+    byId('disablePhaseList').innerHTML = disabled.map((phase) => `<li>${phaseDisplayName(phase, nextConfig)}</li>`).join('');
+    byId('disableConfirmDialog').showModal();
+    return;
+  }
+  try {
+    await savePhaseConfig(nextConfig);
+  } catch (error) {
+    byId('phaseDialogError').textContent = error.message;
+    byId('phaseDialogError').hidden = false;
+  }
+}
+
+function bindPhaseDialog() {
+  byId('editPhasesButton').addEventListener('click', openPhaseDialog);
+  document.querySelectorAll('[data-close-phase-dialog]').forEach((button) => button.addEventListener('click', closePhaseDialog));
+  byId('savePhasesButton').addEventListener('click', handlePhaseSave);
+  byId('cancelDisableButton').addEventListener('click', () => {
+    pendingPhaseConfig = null;
+    byId('disableConfirmDialog').close();
+    PHASES.forEach((phase) => { byId(`${phase}Enabled`).checked = originalPhaseConfig[phase].enabled; });
+  });
+  byId('confirmDisableButton').addEventListener('click', async () => {
+    byId('disableConfirmDialog').close();
+    try {
+      await savePhaseConfig(pendingPhaseConfig);
+    } catch (error) {
+      byId('phaseDialogError').textContent = error.message;
+      byId('phaseDialogError').hidden = false;
+    }
+  });
+}
+
 async function initialise() {
+  bindPhaseDialog();
   if (!selectedDeviceId) {
     setPageError('No device was selected. Return to the dashboard and choose a device.');
     updateDeviceName('No Device Selected');
@@ -215,12 +334,10 @@ async function initialise() {
   }
 
   updateDeviceName(selectedDeviceId);
-
   const devices = await getJson('/api/devices');
-  const selectedDevice = devices.find((device) => device.name === selectedDeviceId);
-  if (!selectedDevice) {
-    throw new Error(`The device ${selectedDeviceId} is no longer configured`);
-  }
+  selectedDevice = devices.find((device) => device.name === selectedDeviceId);
+  if (!selectedDevice) throw new Error(`The device ${selectedDeviceId} is no longer configured`);
+  applyPhaseConfig(selectedDevice.phaseConfig);
 
   const [latest, historyRows] = await Promise.all([
     getJson(apiUrl('/api/latest')),
@@ -235,13 +352,11 @@ async function initialise() {
     setDisabledState();
     return;
   }
-
   if (selectedDevice.status !== 'online') {
     if (latest) updateLive(latest);
     setUnavailableState(selectedDevice);
     return;
   }
-
   if (!latest) {
     setUnavailableState({ status: 'offline', statusMessage: `No readings are available for ${selectedDeviceId}` });
     return;

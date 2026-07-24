@@ -510,3 +510,140 @@ body,
     padding-right: 18px;
   }
 }
+
+/* v1.5.6 phase line configuration */
+.secondary-button,
+.primary-button,
+.danger-button,
+.dialog-close {
+  min-height: 42px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-button {
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  color: var(--primary-dark);
+  background: var(--surface);
+}
+
+.primary-button,
+.danger-button {
+  padding: 0 18px;
+  border: 1px solid transparent;
+  color: #fff;
+}
+
+.primary-button { background: var(--primary); }
+.danger-button { background: var(--danger); }
+
+.secondary-button:hover,
+.secondary-button:focus-visible { border-color: var(--primary); }
+
+.phase-card.is-disabled { background: var(--surface-soft); }
+.phase-card.is-disabled .phase-title { border-bottom: 0; }
+
+.phase-disabled[hidden] {
+  display: none;
+}
+
+.phase-disabled {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 118px;
+  padding: 22px 19px;
+  color: var(--muted);
+}
+
+.disabled-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 5px rgba(100, 116, 139, 0.13);
+}
+
+.phase-dialog,
+.confirm-dialog {
+  width: min(680px, calc(100% - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.confirm-dialog { width: min(520px, calc(100% - 32px)); }
+.phase-dialog::backdrop,
+.confirm-dialog::backdrop { background: rgba(2, 10, 23, 0.62); }
+
+.dialog-heading,
+.phase-editor-heading,
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dialog-heading h2 { margin-bottom: 0; }
+.dialog-close {
+  width: 42px;
+  padding: 0;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: transparent;
+  font-size: 24px;
+}
+
+.dialog-help { color: var(--muted); }
+.phase-editor-list { display: grid; gap: 14px; margin-top: 20px; }
+.phase-editor {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--phase-l1);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.phase-editor-l2 { border-left-color: var(--phase-l2); }
+.phase-editor-l3 { border-left-color: var(--phase-l3); }
+.phase-editor > label { display: block; margin: 14px 0 7px; font-size: 13px; font-weight: 700; }
+.phase-editor-heading > strong { font-size: 21px; }
+.switch-label { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.switch-label input { width: 18px; height: 18px; }
+.phase-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--phase-l1);
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+}
+.phase-editor-l2 .phase-input { border-left-color: var(--phase-l2); }
+.phase-editor-l3 .phase-input { border-left-color: var(--phase-l3); }
+.phase-input:focus { outline: 3px solid rgba(11, 99, 206, 0.18); border-color: var(--primary); }
+.dialog-actions { justify-content: flex-end; margin-top: 22px; }
+.dialog-error { margin: 14px 0 0; color: var(--danger); font-weight: 700; }
+.confirm-dialog li { margin: 6px 0; font-weight: 700; }
+
+[data-theme="dark"] .phase-dialog,
+[data-theme="dark"] .confirm-dialog,
+[data-theme="dark"] .phase-input,
+[data-theme="dark"] .secondary-button { background: var(--surface); color: var(--text); }
+
+@media (max-width: 560px) {
+  .phase-dialog, .confirm-dialog { padding: 18px; }
+  .phase-editor-heading { align-items: flex-start; flex-direction: column; }
+  .dialog-actions { align-items: stretch; flex-direction: column-reverse; }
+  .dialog-actions button { width: 100%; }
+}

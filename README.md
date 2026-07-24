@@ -2,7 +2,7 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.5: Site & Tariff Options
+## Version 1.5.6: Phase Line Configuration
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 
@@ -77,3 +77,9 @@ Version 1.5.5 adds shared site and tariff configuration to the main dashboard. T
 Version 1.5.3 adds a 24-hour historical graph to the main dashboard. It combines the latest stored reading from every measured device for each one-second interval and displays one Total Power line in kW. The graph appears below the summary cards and above the Devices area.
 
 The Total Power History and Devices sections can be collapsed independently. Both use `▼` while expanded and `▶` while collapsed, and both save their selected state locally in the browser. The graph is expanded by default for a first-time user and supports the existing Light and Dark themes.
+
+## Phase line configuration (v1.5.6)
+
+Each configured meter has independent settings for L1, L2 and L3. On the Device Details page, select **Edit Phase Lines** to add an optional label or enable/disable metering for a phase. Labels are displayed as, for example, `L1 - Kitchen` throughout the phase cards, energy summary headings and graph legend.
+
+Disabling a phase requires confirmation. Existing history is preserved and remains visible, while no new measurement records are stored for that phase. The disabled interval is represented as a gap in the graph, keeping a genuine zero-power reading distinct from metering being switched off. Re-enabling a phase resumes collection without requiring confirmation.

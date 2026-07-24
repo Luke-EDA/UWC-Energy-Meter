@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.5.5",
-  "description": "Protocol-agnostic multi-device dashboard with persistent site, currency and electricity tariff options.",
+  "version": "1.5.6",
+  "description": "Protocol-agnostic multi-device dashboard with per-device phase labels, phase metering controls and preserved history.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Site & Tariff Options"
+  "buildName": "Phase Line Configuration"
 }

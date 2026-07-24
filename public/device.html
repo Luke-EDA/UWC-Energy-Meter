@@ -27,7 +27,7 @@
           </button>
           <span class="theme-toggle-label">Toggle Dark Mode</span>
         </div>
-        <div class="version-chip">v1.5.1</div>
+        <div class="version-chip">v1.5.6</div>
       </div>
     </nav>
 
@@ -76,43 +76,47 @@
             <p class="eyebrow">Live measurements</p>
             <h2>Phase Readings</h2>
           </div>
+          <button id="editPhasesButton" class="secondary-button" type="button">Edit Phase Lines</button>
         </div>
 
         <div class="phase-grid">
-          <article class="phase-card phase-l1">
+          <article id="l1Card" class="phase-card phase-l1">
             <div class="phase-title">
               <span>Phase</span>
-              <strong>L1</strong>
+              <strong id="l1Title">L1</strong>
             </div>
             <dl class="measurement-list">
               <div><dt>Voltage</dt><dd id="l1v">-- V</dd></div>
               <div><dt>Current</dt><dd id="l1c">-- A</dd></div>
               <div><dt>Power</dt><dd id="l1p">-- kW</dd></div>
             </dl>
+            <div id="l1Disabled" class="phase-disabled" hidden><span class="disabled-indicator"></span><strong>Disabled</strong></div>
           </article>
 
-          <article class="phase-card phase-l2">
+          <article id="l2Card" class="phase-card phase-l2">
             <div class="phase-title">
               <span>Phase</span>
-              <strong>L2</strong>
+              <strong id="l2Title">L2</strong>
             </div>
             <dl class="measurement-list">
               <div><dt>Voltage</dt><dd id="l2v">-- V</dd></div>
               <div><dt>Current</dt><dd id="l2c">-- A</dd></div>
               <div><dt>Power</dt><dd id="l2p">-- kW</dd></div>
             </dl>
+            <div id="l2Disabled" class="phase-disabled" hidden><span class="disabled-indicator"></span><strong>Disabled</strong></div>
           </article>
 
-          <article class="phase-card phase-l3">
+          <article id="l3Card" class="phase-card phase-l3">
             <div class="phase-title">
               <span>Phase</span>
-              <strong>L3</strong>
+              <strong id="l3Title">L3</strong>
             </div>
             <dl class="measurement-list">
               <div><dt>Voltage</dt><dd id="l3v">-- V</dd></div>
               <div><dt>Current</dt><dd id="l3c">-- A</dd></div>
               <div><dt>Power</dt><dd id="l3p">-- kW</dd></div>
             </dl>
+            <div id="l3Disabled" class="phase-disabled" hidden><span class="disabled-indicator"></span><strong>Disabled</strong></div>
           </article>
         </div>
       </section>
@@ -127,7 +131,7 @@
         <div class="table-wrap">
           <table id="summaryTable">
             <thead>
-              <tr><th>Period</th><th>L1</th><th>L2</th><th>L3</th><th>Total</th></tr>
+              <tr><th>Period</th><th id="l1SummaryHeader">L1</th><th id="l2SummaryHeader">L2</th><th id="l3SummaryHeader">L3</th><th>Total</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -150,9 +154,41 @@
       <div id="pageMessage" class="page-message" role="alert" hidden></div>
     </main>
 
+    <dialog id="phaseDialog" class="phase-dialog" aria-labelledby="phaseDialogTitle">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Device configuration</p><h2 id="phaseDialogTitle">Edit Phase Lines</h2></div>
+        <button class="dialog-close" type="button" data-close-phase-dialog aria-label="Close">×</button>
+      </div>
+      <p class="dialog-help">Labels are optional. Disabling a phase stops new metering while preserving its existing history.</p>
+      <div class="phase-editor-list">
+        <section class="phase-editor phase-editor-l1">
+          <div class="phase-editor-heading"><strong>L1</strong><label class="switch-label"><input id="l1Enabled" type="checkbox"><span>Metering enabled</span></label></div>
+          <label for="l1Label">Optional label</label><input id="l1Label" class="phase-input" maxlength="50" placeholder="e.g. Kitchen">
+        </section>
+        <section class="phase-editor phase-editor-l2">
+          <div class="phase-editor-heading"><strong>L2</strong><label class="switch-label"><input id="l2Enabled" type="checkbox"><span>Metering enabled</span></label></div>
+          <label for="l2Label">Optional label</label><input id="l2Label" class="phase-input" maxlength="50" placeholder="e.g. Staff Breakroom">
+        </section>
+        <section class="phase-editor phase-editor-l3">
+          <div class="phase-editor-heading"><strong>L3</strong><label class="switch-label"><input id="l3Enabled" type="checkbox"><span>Metering enabled</span></label></div>
+          <label for="l3Label">Optional label</label><input id="l3Label" class="phase-input" maxlength="50" placeholder="e.g. Bathroom">
+        </section>
+      </div>
+      <p id="phaseDialogError" class="dialog-error" hidden></p>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-phase-dialog>Cancel</button><button id="savePhasesButton" class="primary-button" type="button">Save Phase Lines</button></div>
+    </dialog>
+
+    <dialog id="disableConfirmDialog" class="confirm-dialog" aria-labelledby="disableConfirmTitle">
+      <div class="dialog-heading"><div><p class="eyebrow">Operational change</p><h2 id="disableConfirmTitle">Disable Phase Metering?</h2></div></div>
+      <p>You are about to disable metering for:</p>
+      <ul id="disablePhaseList"></ul>
+      <p>No new measurements will be recorded for these phases until they are enabled again. Existing history will remain available.</p>
+      <div class="dialog-actions"><button id="cancelDisableButton" class="secondary-button" type="button">Cancel</button><button id="confirmDisableButton" class="danger-button" type="button">Disable Phase(s)</button></div>
+    </dialog>
+
     <footer class="detail-footer">
       <strong>UWC Energy Monitor</strong>
-      <span>Version 1.5.1 · Appearance & User Experience</span>
+      <span>Version 1.5.6 · Phase Line Configuration</span>
       <span>Simulator Backend · SQLite Connected</span>
     </footer>
   </div>

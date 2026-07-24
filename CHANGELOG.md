@@ -1,5 +1,10 @@
 # Changelog
 
+### v1.5.6 hotfix 2
+- Fixed active phase cards incorrectly showing the Disabled status.
+- Ensured the disabled status is only rendered when a phase is actually disabled.
+
+
 ## 1.5.5 - Site & Tariff Options
 
 - Added an Options button to the main dashboard header.
@@ -145,3 +150,20 @@
 - System summary tiles and live device cards.
 - Click-through navigation to the device details page.
 - Add Device placeholder dialog.
+
+## [1.5.6] - Phase Line Configuration
+
+### Added
+- Per-device optional labels for L1, L2 and L3.
+- An **Edit Phase Lines** dialog on the Device Details page.
+- Independent metering enable/disable controls for every phase.
+- Confirmation before one or more active phases are disabled.
+- Phase-coloured label inputs matching the L1, L2 and L3 display accents.
+- Persistent phase configuration and phase enable/disable event timestamps.
+
+### Changed
+- Disabled phase cards remain visible and show a compact disabled status.
+- Live totals and new energy summaries exclude disabled phases.
+- Historical phase data remains visible after a phase is disabled.
+- Disabled intervals appear as graph gaps rather than false zero readings.
+- New readings are stored in phase-normalised tables, so disabled phases do not create measurement records.
