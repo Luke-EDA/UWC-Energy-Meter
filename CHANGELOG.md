@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.4 - Phase Colour Alignment
+
+- Added reusable application phase colour variables: L1 red (`#D32F2F`), L2 yellow (`#FBC02D`), and L3 blue (`#1976D2`).
+- Updated the top accent bars on the Device Details L1, L2 and L3 cards to use the standard phase colours.
+- Updated the Device Details historical power graph so each phase trace matches its corresponding card colour.
+- Kept the dashboard Total Power History graph on the primary application accent because it represents combined power rather than an individual phase.
+- Preserved phase colours in both Light and Dark themes.
+
 ## 1.5.3 - Dashboard Total Power History
 
 - Added a 24-hour Total Power History graph to the main dashboard below the summary cards and above the Devices area.

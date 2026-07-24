@@ -2,7 +2,7 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.3: Dashboard Total Power History
+## Version 1.5.4: Phase Colour Alignment
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 
@@ -58,6 +58,10 @@ Version 1.5.2 makes the Devices area on the dashboard collapsible. Select the De
 ## Appearance themes
 
 Version 1.5.1 adds a **Toggle Dark Mode** control in the upper-right of both the dashboard and device details page. The existing interface remains the Light theme. Dark mode uses a very dark blue (`#08182E`) background with contrasting cards and text. The selected theme is stored locally in the browser and persists through navigation, refreshes, Back/Forward actions and browser restarts.
+
+## Standard phase colours
+
+Version 1.5.4 aligns the Device Details interface with the three-phase wiring colour convention used by the project. L1 is red (`#D32F2F`), L2 is yellow (`#FBC02D`), and L3 is blue (`#1976D2`). The same reusable phase colours are applied to the accent bars on the L1, L2 and L3 reading cards and to their matching traces in the device historical power graph. The dashboard Total Power History line remains the application accent colour because it represents a combined value rather than an individual phase.
 
 ## Dashboard total power history
 

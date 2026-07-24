@@ -11,7 +11,10 @@ function chartThemeColours() {
   return {
     text: styles.getPropertyValue('--text').trim() || '#334155',
     muted: styles.getPropertyValue('--muted').trim() || '#64748b',
-    border: styles.getPropertyValue('--border').trim() || '#e2e8f0'
+    border: styles.getPropertyValue('--border').trim() || '#e2e8f0',
+    phaseL1: styles.getPropertyValue('--phase-l1').trim() || '#d32f2f',
+    phaseL2: styles.getPropertyValue('--phase-l2').trim() || '#fbc02d',
+    phaseL3: styles.getPropertyValue('--phase-l3').trim() || '#1976d2'
   };
 }
 
@@ -24,6 +27,11 @@ function applyChartTheme() {
   chart.options.scales.y.ticks.color = colours.muted;
   chart.options.scales.y.grid.color = colours.border;
   chart.options.scales.y.title.color = colours.text;
+  const phaseColours = [colours.phaseL1, colours.phaseL2, colours.phaseL3];
+  chart.data.datasets.forEach((dataset, index) => {
+    dataset.borderColor = phaseColours[index];
+    dataset.backgroundColor = `${phaseColours[index]}22`;
+  });
   chart.update('none');
 }
 
@@ -123,9 +131,9 @@ function buildChart(historyRows) {
     data: {
       labels,
       datasets: [
-        { label: 'L1 kW', data: historyRows.map((row) => row.l1_power_kw), borderColor: '#0b63ce', backgroundColor: '#0b63ce22', tension: 0.25, pointRadius: 1.5 },
-        { label: 'L2 kW', data: historyRows.map((row) => row.l2_power_kw), borderColor: '#28a745', backgroundColor: '#28a74522', tension: 0.25, pointRadius: 1.5 },
-        { label: 'L3 kW', data: historyRows.map((row) => row.l3_power_kw), borderColor: '#f59e0b', backgroundColor: '#f59e0b22', tension: 0.25, pointRadius: 1.5 }
+        { label: 'L1 kW', data: historyRows.map((row) => row.l1_power_kw), borderColor: themeColours.phaseL1, backgroundColor: `${themeColours.phaseL1}22`, tension: 0.25, pointRadius: 1.5 },
+        { label: 'L2 kW', data: historyRows.map((row) => row.l2_power_kw), borderColor: themeColours.phaseL2, backgroundColor: `${themeColours.phaseL2}22`, tension: 0.25, pointRadius: 1.5 },
+        { label: 'L3 kW', data: historyRows.map((row) => row.l3_power_kw), borderColor: themeColours.phaseL3, backgroundColor: `${themeColours.phaseL3}22`, tension: 0.25, pointRadius: 1.5 }
       ]
     },
     options: {

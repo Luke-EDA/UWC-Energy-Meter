@@ -10,6 +10,9 @@
   --success: #28a745;
   --warning: #f59e0b;
   --danger: #dc3545;
+  --phase-l1: #d32f2f;
+  --phase-l2: #fbc02d;
+  --phase-l3: #1976d2;
   --shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
   --radius: 16px;
 }
@@ -218,11 +221,11 @@ h1 {
   display: block;
   height: 5px;
   content: "";
-  background: var(--primary);
+  background: var(--phase-l1);
 }
 
-.phase-l2::before { background: var(--success); }
-.phase-l3::before { background: var(--warning); }
+.phase-l2::before { background: var(--phase-l2); }
+.phase-l3::before { background: var(--phase-l3); }
 
 .phase-title {
   display: flex;
