@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.5 - Site & Tariff Options
+
+- Added an Options button to the main dashboard header.
+- Added a responsive, Light/Dark theme-compatible Site Options dialog.
+- Added a persistent Site Name setting that appears above the live reading cards and is completely hidden when blank.
+- Added a currency selector that defaults to South African Rand (`🇿🇦 ZAR`) and includes ZAR, USD, EUR and GBP.
+- Added an optional non-negative Price per kWh setting for future energy-cost calculations.
+- Added `GET /api/settings` and `PUT /api/settings` endpoints.
+- Stored shared application settings in SQLite so they remain consistent across browsers and computers.
+- Added server-side validation for site name, currency and tariff values.
+
 ## 1.5.4 - Phase Colour Alignment
 
 - Added reusable application phase colour variables: L1 red (`#D32F2F`), L2 yellow (`#FBC02D`), and L3 blue (`#1976D2`).

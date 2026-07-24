@@ -2,7 +2,7 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.4: Phase Colour Alignment
+## Version 1.5.5: Site & Tariff Options
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 
@@ -61,7 +61,16 @@ Version 1.5.1 adds a **Toggle Dark Mode** control in the upper-right of both the
 
 ## Standard phase colours
 
-Version 1.5.4 aligns the Device Details interface with the three-phase wiring colour convention used by the project. L1 is red (`#D32F2F`), L2 is yellow (`#FBC02D`), and L3 is blue (`#1976D2`). The same reusable phase colours are applied to the accent bars on the L1, L2 and L3 reading cards and to their matching traces in the device historical power graph. The dashboard Total Power History line remains the application accent colour because it represents a combined value rather than an individual phase.
+Version 1.5.5 adds shared site and tariff configuration to the main dashboard. The new Options dialog stores a Site Name, currency and optional Price per kWh in SQLite. South African Rand (`🇿🇦 ZAR`) is selected by default. A configured site name is shown between the main header and the live reading cards; when the field is blank, the site-name area is removed completely. Currency and tariff values are retained for future energy-cost calculations.
+
+## Site and tariff options
+
+- Open **Options** from the dashboard header.
+- Enter an optional Site Name.
+- Choose a currency; ZAR is the default.
+- Enter an optional non-negative Price per kWh.
+- Select **Save Options** to update the dashboard immediately.
+- Settings are stored centrally in SQLite and are shared by all browsers using the monitor.
 
 ## Dashboard total power history
 

@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.5.4",
-  "description": "Protocol-agnostic multi-device dashboard with persistent themes, collapsible sections, total power history, and standard phase colours.",
+  "version": "1.5.5",
+  "description": "Protocol-agnostic multi-device dashboard with persistent site, currency and electricity tariff options.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Phase Colour Alignment"
+  "buildName": "Site & Tariff Options"
 }

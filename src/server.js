@@ -44,6 +44,14 @@ db.serialize(() => {
     total_power_kw REAL NOT NULL
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_readings_device_ts ON readings(device_id, ts)');
+  db.run(`CREATE TABLE IF NOT EXISTS app_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    site_name TEXT NOT NULL DEFAULT '',
+    currency TEXT NOT NULL DEFAULT 'ZAR',
+    price_per_kwh REAL
+  )`);
+  db.run(`INSERT OR IGNORE INTO app_settings (id, site_name, currency, price_per_kwh)
+          VALUES (1, '', 'ZAR', NULL)`);
 });
 
 const app = Fastify({ logger: true });
@@ -52,6 +60,46 @@ app.register(fastifyStatic, {
   root: path.join(__dirname, '..', 'public'),
   prefix: '/'
 });
+
+
+const SUPPORTED_CURRENCIES = new Set(['ZAR', 'USD', 'EUR', 'GBP']);
+
+function getSettings() {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT site_name, currency, price_per_kwh FROM app_settings WHERE id = 1`, (err, row) => {
+      if (err) return reject(err);
+      resolve({
+        siteName: row?.site_name || '',
+        currency: row?.currency || 'ZAR',
+        pricePerKwh: row?.price_per_kwh ?? null
+      });
+    });
+  });
+}
+
+function updateSettings(body = {}) {
+  const siteName = String(body.siteName ?? '').trim();
+  const currency = String(body.currency ?? 'ZAR').trim().toUpperCase();
+  const rawPrice = body.pricePerKwh;
+  const pricePerKwh = rawPrice === '' || rawPrice === null || rawPrice === undefined
+    ? null
+    : Number(rawPrice);
+
+  if (siteName.length > 120) throw new Error('Site name must be 120 characters or fewer.');
+  if (!SUPPORTED_CURRENCIES.has(currency)) throw new Error('Unsupported currency.');
+  if (pricePerKwh !== null && (!Number.isFinite(pricePerKwh) || pricePerKwh < 0)) {
+    throw new Error('Price per kWh must be a non-negative number.');
+  }
+
+  return new Promise((resolve, reject) => {
+    db.run(`UPDATE app_settings
+            SET site_name = ?, currency = ?, price_per_kwh = ?
+            WHERE id = 1`, [siteName, currency, pricePerKwh], (err) => {
+      if (err) return reject(err);
+      resolve({ siteName, currency, pricePerKwh });
+    });
+  });
+}
 
 function verifyToken(request, reply) {
   const auth = request.headers.authorization || '';
@@ -285,6 +333,16 @@ app.get('/api/devices', async () => {
 });
 
 app.get('/api/providers', async () => deviceManager.getProviders());
+
+app.get('/api/settings', async () => getSettings());
+
+app.put('/api/settings', async (request, reply) => {
+  try {
+    return await updateSettings(request.body || {});
+  } catch (err) {
+    reply.code(400).send({ error: err.message });
+  }
+});
 
 app.post('/api/devices', async (request, reply) => {
   try {

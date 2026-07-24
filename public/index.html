@@ -17,6 +17,7 @@
         <h1>Energy Monitor</h1>
       </div>
       <div class="topbar-controls">
+        <button id="optionsButton" class="header-button" type="button">Options</button>
         <div class="theme-control">
           <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
             <span class="theme-toggle-track" aria-hidden="true">
@@ -32,12 +33,17 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.5.3</strong>
+          <strong>v1.5.5</strong>
         </div>
       </div>
     </header>
 
     <main class="content">
+      <section id="siteNameBanner" class="site-name-banner" aria-label="Site name" hidden>
+        <p class="section-eyebrow">Monitoring site</p>
+        <h2 id="siteNameDisplay"></h2>
+      </section>
+
       <section class="summary-grid" aria-label="System summary">
         <article class="summary-card"><span class="summary-label">Devices</span><strong id="deviceCount" class="summary-value">--</strong></article>
         <article class="summary-card"><span class="summary-label">Online</span><strong id="onlineCount" class="summary-value">--</strong></article>
@@ -78,10 +84,52 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.3 · Dashboard Total Power History</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.5 · Site & Tariff Options</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
+
+
+  <dialog id="optionsDialog" class="modal">
+    <form id="optionsForm" class="modal-card">
+      <div class="modal-heading">
+        <div><p class="section-eyebrow">Dashboard settings</p><h2>Site Options</h2></div>
+        <button id="closeOptionsDialog" class="icon-button" type="button" aria-label="Close options dialog">×</button>
+      </div>
+
+      <div class="form-grid">
+        <label class="form-field form-field-wide">
+          <span>Site Name</span>
+          <input id="siteNameInput" name="siteName" type="text" maxlength="120" placeholder="e.g. UWC Main Campus">
+          <small>Displayed above the live dashboard readings. Leave blank to hide it.</small>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Currency</span>
+          <select id="currencyInput" name="currency" required>
+            <option value="ZAR">🇿🇦 ZAR — South African Rand</option>
+            <option value="USD">🇺🇸 USD — US Dollar</option>
+            <option value="EUR">🇪🇺 EUR — Euro</option>
+            <option value="GBP">🇬🇧 GBP — British Pound</option>
+          </select>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Price per kWh</span>
+          <div class="input-with-unit price-input">
+            <span id="currencySymbol" aria-hidden="true">R</span>
+            <input id="pricePerKwhInput" name="pricePerKwh" type="number" min="0" step="0.0001" inputmode="decimal" placeholder="e.g. 2.7500">
+            <span>/ kWh</span>
+          </div>
+          <small>Saved for future energy-cost calculations.</small>
+        </label>
+      </div>
+
+      <div id="optionsMessage" class="form-message" role="status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button id="cancelOptions" class="secondary-button" type="button">Cancel</button>
+        <button id="saveOptionsButton" class="primary-button" type="submit">Save Options</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="deviceDialog" class="modal">
     <form id="deviceForm" class="modal-card">

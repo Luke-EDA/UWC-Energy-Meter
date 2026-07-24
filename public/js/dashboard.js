@@ -8,6 +8,7 @@ let totalPowerHistoryChart = null;
 let devicesById = new Map();
 let editingDeviceId = null;
 let pendingDeleteDevice = null;
+let currentSettings = { siteName: '', currency: 'ZAR', pricePerKwh: null };
 
 const elements = {
   deviceCount: document.getElementById('deviceCount'),
@@ -19,6 +20,19 @@ const elements = {
   dashboardMessage: document.getElementById('dashboardMessage'),
   footerDeviceStatus: document.getElementById('footerDeviceStatus'),
   addDeviceButton: document.getElementById('addDeviceButton'),
+  optionsButton: document.getElementById('optionsButton'),
+  siteNameBanner: document.getElementById('siteNameBanner'),
+  siteNameDisplay: document.getElementById('siteNameDisplay'),
+  optionsDialog: document.getElementById('optionsDialog'),
+  optionsForm: document.getElementById('optionsForm'),
+  closeOptionsDialog: document.getElementById('closeOptionsDialog'),
+  cancelOptions: document.getElementById('cancelOptions'),
+  siteNameInput: document.getElementById('siteNameInput'),
+  currencyInput: document.getElementById('currencyInput'),
+  currencySymbol: document.getElementById('currencySymbol'),
+  pricePerKwhInput: document.getElementById('pricePerKwhInput'),
+  optionsMessage: document.getElementById('optionsMessage'),
+  saveOptionsButton: document.getElementById('saveOptionsButton'),
   deviceSectionToggle: document.getElementById('deviceSectionToggle'),
   deviceSectionContent: document.getElementById('deviceSectionContent'),
   deviceSectionIndicator: document.getElementById('deviceSectionIndicator'),
@@ -43,6 +57,80 @@ const elements = {
   confirmDelete: document.getElementById('confirmDelete'),
   deleteMessage: document.getElementById('deleteMessage')
 };
+
+
+const CURRENCY_SYMBOLS = {
+  ZAR: 'R',
+  USD: '$',
+  EUR: '€',
+  GBP: '£'
+};
+
+function renderSiteName() {
+  const siteName = String(currentSettings.siteName || '').trim();
+  elements.siteNameDisplay.textContent = siteName;
+  elements.siteNameBanner.hidden = !siteName;
+}
+
+function updateCurrencySymbol() {
+  elements.currencySymbol.textContent = CURRENCY_SYMBOLS[elements.currencyInput.value] || elements.currencyInput.value;
+}
+
+async function loadSettings() {
+  try {
+    const response = await fetch('/api/settings', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Settings API returned ${response.status}`);
+    currentSettings = await response.json();
+    renderSiteName();
+  } catch (error) {
+    console.error('Unable to load site settings:', error);
+  }
+}
+
+function openOptionsDialog() {
+  elements.siteNameInput.value = currentSettings.siteName || '';
+  elements.currencyInput.value = currentSettings.currency || 'ZAR';
+  elements.pricePerKwhInput.value = currentSettings.pricePerKwh ?? '';
+  elements.optionsMessage.textContent = '';
+  elements.optionsMessage.classList.remove('error', 'success');
+  updateCurrencySymbol();
+  elements.optionsDialog.showModal();
+  elements.siteNameInput.focus();
+}
+
+async function submitOptions(event) {
+  event.preventDefault();
+  elements.optionsMessage.textContent = 'Saving options…';
+  elements.optionsMessage.classList.remove('error', 'success');
+  elements.saveOptionsButton.disabled = true;
+
+  const payload = {
+    siteName: elements.siteNameInput.value.trim(),
+    currency: elements.currencyInput.value,
+    pricePerKwh: elements.pricePerKwhInput.value === '' ? null : Number(elements.pricePerKwhInput.value)
+  };
+
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Unable to save options (${response.status})`);
+
+    currentSettings = result;
+    renderSiteName();
+    elements.optionsMessage.textContent = 'Options saved successfully.';
+    elements.optionsMessage.classList.add('success');
+    window.setTimeout(() => elements.optionsDialog.close(), 500);
+  } catch (error) {
+    elements.optionsMessage.textContent = error.message;
+    elements.optionsMessage.classList.add('error');
+  } finally {
+    elements.saveOptionsButton.disabled = false;
+  }
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -445,6 +533,11 @@ function initialiseDeviceSection() {
 }
 
 function initialiseDialogs() {
+  elements.optionsButton.addEventListener('click', openOptionsDialog);
+  elements.closeOptionsDialog.addEventListener('click', () => elements.optionsDialog.close());
+  elements.cancelOptions.addEventListener('click', () => elements.optionsDialog.close());
+  elements.currencyInput.addEventListener('change', updateCurrencySymbol);
+  elements.optionsForm.addEventListener('submit', submitOptions);
   elements.addDeviceButton.addEventListener('click', () => openDeviceDialog());
   elements.closeDeviceDialog.addEventListener('click', () => elements.deviceDialog.close());
   elements.cancelDevice.addEventListener('click', () => elements.deviceDialog.close());
@@ -463,7 +556,7 @@ function initialiseDialogs() {
     if (device) openDeviceDialog(device);
   });
 
-  [elements.deviceDialog, elements.deleteDialog].forEach((dialog) => {
+  [elements.optionsDialog, elements.deviceDialog, elements.deleteDialog].forEach((dialog) => {
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
     });
@@ -474,6 +567,7 @@ function initialise() {
   initialiseHistorySection();
   initialiseDeviceSection();
   initialiseDialogs();
+  loadSettings();
   refreshDashboard();
   refreshTotalPowerHistory();
   window.setInterval(refreshDashboard, REFRESH_INTERVAL_MS);
