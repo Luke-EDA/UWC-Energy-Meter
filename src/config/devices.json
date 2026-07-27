@@ -12,14 +12,14 @@
     "phaseConfig": {
       "l1": {
         "enabled": true,
-        "label": "Kitchen"
+        "label": ""
       },
       "l2": {
         "enabled": true,
         "label": ""
       },
       "l3": {
-        "enabled": false,
+        "enabled": true,
         "label": ""
       }
     }

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.7.1 - Dark Mode Dropdown Fix
+
+- Fixed graph range dropdown options rendering as white text on a white background in Dark Mode on Windows Chromium-based browsers.
+- Added explicit dark backgrounds and high-contrast text colours to the range selector and its native options.
+- Added a dark colour-scheme hint for more consistent native menu rendering.
+- No changes were made to graph data, range selection behaviour, or persistence.
+
+## 1.5.7 - Graph Range Selection
+
+- Added independent range dropdowns to the dashboard Total Power History graph and Device Details power graph.
+- Added selectable ranges for 24 hours, 7 days, 1 month, 6 months and 1 year.
+- Kept 24 hours as the default whenever a page is opened or refreshed; range selections are not persisted.
+- Added server-side time-window validation and aggregation to keep long-range graphs responsive.
+- Added range-aware date labels and full timestamps in chart tooltips.
+- Preserved disabled-phase gaps and all existing historical readings across every range.
+- Added graph-level loading, empty-data and error messages.
+
 ### v1.5.6 hotfix 2
 - Fixed active phase cards incorrectly showing the Disabled status.
 - Ensured the disabled status is only rendered when a phase is actually disabled.

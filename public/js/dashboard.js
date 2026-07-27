@@ -9,6 +9,8 @@ let devicesById = new Map();
 let editingDeviceId = null;
 let pendingDeleteDevice = null;
 let currentSettings = { siteName: '', currency: 'ZAR', pricePerKwh: null };
+let currentTotalPowerRange = '24h';
+let currentTotalPowerRows = [];
 
 const elements = {
   deviceCount: document.getElementById('deviceCount'),
@@ -41,6 +43,7 @@ const elements = {
   historySectionIndicator: document.getElementById('historySectionIndicator'),
   historyMessage: document.getElementById('historyMessage'),
   totalPowerHistoryCanvas: document.getElementById('totalPowerHistoryChart'),
+  totalPowerRange: document.getElementById('totalPowerRange'),
   deviceDialog: document.getElementById('deviceDialog'),
   deviceForm: document.getElementById('deviceForm'),
   dialogTitle: document.getElementById('dialogTitle'),
@@ -377,14 +380,32 @@ function chartThemeColours() {
   };
 }
 
-function formatHistoryLabel(timestamp) {
-  return new Date(timestamp).toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit', hour12: false
+const RANGE_LABELS = Object.freeze({
+  '24h': '24 hours',
+  '7d': '7 days',
+  '1m': '1 month',
+  '6m': '6 months',
+  '1y': '1 year'
+});
+
+function formatHistoryLabel(timestamp, range = currentTotalPowerRange) {
+  const date = new Date(timestamp);
+  if (range === '24h') return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (range === '7d') return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  if (range === '1m' || range === '6m') return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  return date.toLocaleDateString([], { month: 'short', year: '2-digit' });
+}
+
+function fullHistoryTimestamp(timestamp) {
+  return new Date(timestamp).toLocaleString([], {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   });
 }
 
 function buildTotalPowerHistoryChart(rows) {
   const colours = chartThemeColours();
+  currentTotalPowerRows = rows;
   const data = rows.map((row) => Number(row.total_power_kw));
   const labels = rows.map((row) => formatHistoryLabel(row.ts));
 
@@ -420,6 +441,7 @@ function buildTotalPowerHistoryChart(rows) {
         legend: { labels: { color: colours.text } },
         tooltip: {
           callbacks: {
+            title: (items) => items.length ? fullHistoryTimestamp(currentTotalPowerRows[items[0].dataIndex]?.ts) : '',
             label: (context) => `Total Power: ${Number(context.parsed.y).toFixed(2)} kW`
           }
         }
@@ -440,14 +462,19 @@ function buildTotalPowerHistoryChart(rows) {
   });
 }
 
-async function refreshTotalPowerHistory() {
+async function refreshTotalPowerHistory(range = currentTotalPowerRange, silent = false) {
+  currentTotalPowerRange = RANGE_LABELS[range] ? range : '24h';
+  elements.totalPowerRange.value = currentTotalPowerRange;
+  if (!silent) elements.historyMessage.textContent = 'Loading total power history…';
+  elements.historyMessage.classList.remove('error');
+
   try {
-    const response = await fetch('/api/history/total-power?hours=24', { cache: 'no-store' });
+    const response = await fetch(`/api/history/total-power?range=${encodeURIComponent(currentTotalPowerRange)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`History API returned ${response.status}`);
-    const rows = await response.json();
+    const payload = await response.json();
+    const rows = Array.isArray(payload) ? payload : (payload.rows || []);
     buildTotalPowerHistoryChart(rows);
-    elements.historyMessage.textContent = rows.length ? '' : 'No historical power readings are available yet.';
-    elements.historyMessage.classList.remove('error');
+    elements.historyMessage.textContent = rows.length ? '' : 'No historical data is available for this range.';
   } catch (error) {
     console.error('Unable to update total power history:', error);
     elements.historyMessage.textContent = 'Unable to load total power history.';
@@ -548,6 +575,7 @@ function initialiseDialogs() {
     pendingDeleteDevice = null;
   });
   elements.confirmDelete.addEventListener('click', confirmDeleteDevice);
+  elements.totalPowerRange.addEventListener('change', (event) => refreshTotalPowerHistory(event.target.value));
 
   elements.deviceGrid.addEventListener('click', (event) => {
     const button = event.target.closest('.settings-button');
@@ -571,7 +599,7 @@ function initialise() {
   refreshDashboard();
   refreshTotalPowerHistory();
   window.setInterval(refreshDashboard, REFRESH_INTERVAL_MS);
-  window.setInterval(refreshTotalPowerHistory, HISTORY_REFRESH_INTERVAL_MS);
+  window.setInterval(() => refreshTotalPowerHistory(currentTotalPowerRange, true), HISTORY_REFRESH_INTERVAL_MS);
 }
 
 document.addEventListener('DOMContentLoaded', initialise);

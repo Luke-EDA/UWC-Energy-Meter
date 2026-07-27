@@ -10,6 +10,9 @@ let selectedDevice;
 let phaseConfig = defaultPhaseConfig();
 let originalPhaseConfig = defaultPhaseConfig();
 let pendingPhaseConfig = null;
+let currentHistoryRange = '24h';
+let currentHistoryRows = [];
+let historyRefreshTimer = null;
 
 function defaultPhaseConfig() {
   return {
@@ -170,11 +173,44 @@ async function loadSummary() {
     </tr>`).join('');
 }
 
+const RANGE_LABELS = Object.freeze({
+  '24h': '24 hours',
+  '7d': '7 days',
+  '1m': '1 month',
+  '6m': '6 months',
+  '1y': '1 year'
+});
+
+function formatHistoryAxisLabel(timestamp, range = currentHistoryRange) {
+  const date = new Date(timestamp);
+  if (range === '24h') return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (range === '7d') return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  if (range === '1m' || range === '6m') return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  return date.toLocaleDateString([], { month: 'short', year: '2-digit' });
+}
+
+function fullHistoryTimestamp(timestamp) {
+  return new Date(timestamp).toLocaleString([], {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  });
+}
+
+function updateChartData(historyPayload) {
+  currentHistoryRows = Array.isArray(historyPayload) ? historyPayload : (historyPayload.rows || []);
+  const labels = currentHistoryRows.map((row) => formatHistoryAxisLabel(row.ts));
+  chart.data.labels = labels;
+  PHASES.forEach((phase, index) => {
+    chart.data.datasets[index].data = currentHistoryRows.map((row) => row[`${phase}_power_kw`]);
+  });
+  chart.update('none');
+}
+
 function buildChart(historyPayload) {
-  const historyRows = Array.isArray(historyPayload) ? historyPayload : historyPayload.rows;
+  currentHistoryRows = Array.isArray(historyPayload) ? historyPayload : (historyPayload.rows || []);
   const context = byId('powerChart');
   const themeColours = chartThemeColours();
-  const labels = historyRows.map((row) => new Date(row.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const labels = currentHistoryRows.map((row) => formatHistoryAxisLabel(row.ts));
   const colours = [themeColours.phaseL1, themeColours.phaseL2, themeColours.phaseL3];
 
   chart = new Chart(context, {
@@ -183,11 +219,12 @@ function buildChart(historyPayload) {
       labels,
       datasets: PHASES.map((phase, index) => ({
         label: `${phaseDisplayName(phase)} kW`,
-        data: historyRows.map((row) => row[`${phase}_power_kw`]),
+        data: currentHistoryRows.map((row) => row[`${phase}_power_kw`]),
         borderColor: colours[index],
         backgroundColor: `${colours[index]}22`,
         tension: 0.25,
-        pointRadius: 1.5,
+        pointRadius: currentHistoryRange === '24h' ? 1.5 : 1,
+        pointHoverRadius: 4,
         spanGaps: false
       }))
     },
@@ -196,7 +233,14 @@ function buildChart(historyPayload) {
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { color: themeColours.text } } },
+      plugins: {
+        legend: { labels: { color: themeColours.text } },
+        tooltip: {
+          callbacks: {
+            title: (items) => items.length ? fullHistoryTimestamp(currentHistoryRows[items[0].dataIndex]?.ts) : ''
+          }
+        }
+      },
       scales: {
         x: { ticks: { color: themeColours.muted, maxTicksLimit: 12 }, grid: { color: themeColours.border } },
         y: { ticks: { color: themeColours.muted }, grid: { color: themeColours.border }, title: { display: true, text: 'kW', color: themeColours.text } }
@@ -205,18 +249,27 @@ function buildChart(historyPayload) {
   });
 }
 
-function pushChartPoint(data) {
-  if (!chart) return;
-  chart.data.labels.push(new Date(data.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-  PHASES.forEach((phase, index) => {
-    chart.data.datasets[index].data.push(data[`${phase}PowerKw`] ?? null);
-  });
-  const maxPoints = 24 * 60 * 60;
-  while (chart.data.labels.length > maxPoints) {
-    chart.data.labels.shift();
-    chart.data.datasets.forEach((dataset) => dataset.data.shift());
+async function loadHistory(range = currentHistoryRange, silent = false) {
+  const message = byId('deviceHistoryMessage');
+  currentHistoryRange = RANGE_LABELS[range] ? range : '24h';
+  byId('deviceHistoryRange').value = currentHistoryRange;
+  byId('powerGraphTitle').textContent = `Power History · ${RANGE_LABELS[currentHistoryRange]}`;
+  if (!silent) message.textContent = 'Loading power history…';
+  message.classList.remove('error');
+
+  try {
+    const payload = await getJson(apiUrl('/api/history', { range: currentHistoryRange }));
+    if (chart) updateChartData(payload); else buildChart(payload);
+    message.textContent = payload.rows?.length ? '' : 'No historical data is available for this range.';
+  } catch (error) {
+    message.textContent = `Unable to load power history: ${error.message}`;
+    message.classList.add('error');
   }
-  chart.update('none');
+}
+
+function bindHistoryRange() {
+  byId('deviceHistoryRange').addEventListener('change', (event) => loadHistory(event.target.value));
+  historyRefreshTimer = window.setInterval(() => loadHistory(currentHistoryRange, true), 5000);
 }
 
 function websocketUrl() {
@@ -250,7 +303,6 @@ function connectWebSocket() {
       l3: reading.l3PowerKw == null ? null : { voltage: reading.l3Voltage, current: reading.l3Current, powerKw: reading.l3PowerKw }
     };
     updateLive(apiShape);
-    pushChartPoint(reading);
   };
 }
 
@@ -326,6 +378,7 @@ function bindPhaseDialog() {
 
 async function initialise() {
   bindPhaseDialog();
+  bindHistoryRange();
   if (!selectedDeviceId) {
     setPageError('No device was selected. Return to the dashboard and choose a device.');
     updateDeviceName('No Device Selected');
@@ -339,12 +392,8 @@ async function initialise() {
   if (!selectedDevice) throw new Error(`The device ${selectedDeviceId} is no longer configured`);
   applyPhaseConfig(selectedDevice.phaseConfig);
 
-  const [latest, historyRows] = await Promise.all([
-    getJson(apiUrl('/api/latest')),
-    getJson(apiUrl('/api/history', { hours: 24 }))
-  ]);
-
-  buildChart(historyRows);
+  const latest = await getJson(apiUrl('/api/latest'));
+  await loadHistory('24h');
   await loadSummary();
   window.setInterval(loadSummary, 60_000);
 

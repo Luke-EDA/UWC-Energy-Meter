@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.5.6",
-  "description": "Protocol-agnostic multi-device dashboard with per-device phase labels, phase metering controls and preserved history.",
+  "version": "1.5.7.1",
+  "description": "Protocol-agnostic multi-device dashboard with selectable graph history ranges and per-phase metering controls.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Phase Line Configuration"
+  "buildName": "Graph Range Selection"
 }

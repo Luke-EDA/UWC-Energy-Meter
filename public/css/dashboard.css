@@ -831,3 +831,41 @@ body,
     width: 100%;
   }
 }
+
+.graph-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.graph-range-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.graph-range-control select {
+  min-width: 126px;
+  padding: 8px 34px 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+}
+
+/* Windows Chromium keeps native popup menus light in Dark Mode. */
+[data-theme="dark"] .graph-range-control select {
+  background: #16243a;
+  color: #ffffff;
+  color-scheme: light;
+}
+
+[data-theme="dark"] .graph-range-control select option {
+  background: #ffffff;
+  color: #172033;
+}

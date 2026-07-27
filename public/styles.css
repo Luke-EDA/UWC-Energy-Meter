@@ -641,9 +641,66 @@ body,
 [data-theme="dark"] .phase-input,
 [data-theme="dark"] .secondary-button { background: var(--surface); color: var(--text); }
 
+/* Chromium on Windows renders the opened native option list with a light
+   system background, even when the closed select is dark. Keep the closed
+   control dark, but use dark text on light options so every entry is readable. */
+[data-theme="dark"] .graph-range-control select {
+  background: #16243a;
+  color: #ffffff;
+  color-scheme: light;
+}
+
+[data-theme="dark"] .graph-range-control select option {
+  background: #ffffff;
+  color: #172033;
+}
+
 @media (max-width: 560px) {
   .phase-dialog, .confirm-dialog { padding: 18px; }
   .phase-editor-heading { align-items: flex-start; flex-direction: column; }
   .dialog-actions { align-items: stretch; flex-direction: column-reverse; }
   .dialog-actions button { width: 100%; }
+}
+
+.graph-heading-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.graph-range-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.graph-range-control select {
+  min-width: 126px;
+  padding: 8px 34px 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+}
+
+.chart-status {
+  min-height: 22px;
+  margin: -8px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chart-status.error { color: var(--danger); }
+
+@media (max-width: 700px) {
+  .chart-heading,
+  .graph-heading-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

@@ -295,12 +295,30 @@ function latestReading(deviceId = 'uwc-meter-001') {
   });
 }
 
-function history(deviceId, hours = 24) {
-  const safeHours = Math.min(Math.max(Number(hours) || 24, 1), 24 * 365);
-  const since = Date.now() - safeHours * 60 * 60 * 1000;
+const HISTORY_RANGES = Object.freeze({
+  '24h': { durationMs: 24 * 60 * 60 * 1000, bucketMs: 60 * 1000 },
+  '7d': { durationMs: 7 * 24 * 60 * 60 * 1000, bucketMs: 15 * 60 * 1000 },
+  '1m': { durationMs: 30 * 24 * 60 * 60 * 1000, bucketMs: 60 * 60 * 1000 },
+  '6m': { durationMs: 182 * 24 * 60 * 60 * 1000, bucketMs: 24 * 60 * 60 * 1000 },
+  '1y': { durationMs: 365 * 24 * 60 * 60 * 1000, bucketMs: 24 * 60 * 60 * 1000 }
+});
+
+function resolveHistoryRange(value) {
+  const key = String(value || '24h').toLowerCase();
+  return { key: HISTORY_RANGES[key] ? key : '24h', ...(HISTORY_RANGES[key] || HISTORY_RANGES['24h']) };
+}
+
+function history(deviceId, rangeValue = '24h') {
+  const range = resolveHistoryRange(rangeValue);
+  const since = Date.now() - range.durationMs;
   return new Promise((resolve, reject) => {
-    db.all(`SELECT ts, phase, power_kw FROM phase_readings
-            WHERE device_id = ? AND ts >= ? ORDER BY ts ASC`, [deviceId, since], (err, phaseRows) => {
+    db.all(`SELECT CAST(ts / ? AS INTEGER) * ? AS ts,
+                   phase,
+                   AVG(power_kw) AS power_kw
+            FROM phase_readings
+            WHERE device_id = ? AND ts >= ?
+            GROUP BY CAST(ts / ? AS INTEGER), phase
+            ORDER BY ts ASC`, [range.bucketMs, range.bucketMs, deviceId, since, range.bucketMs], (err, phaseRows) => {
       if (err) return reject(err);
       db.all(`SELECT phase, enabled, ts FROM phase_config_events
               WHERE device_id = ? AND ts >= ? ORDER BY ts ASC`, [deviceId, since], (eventErr, events) => {
@@ -310,32 +328,36 @@ function history(deviceId, hours = 24) {
           if (!byTimestamp.has(row.ts)) byTimestamp.set(row.ts, { ts: row.ts, l1_power_kw: null, l2_power_kw: null, l3_power_kw: null });
           byTimestamp.get(row.ts)[`${row.phase}_power_kw`] = row.power_kw;
         }
-        resolve({ rows: [...byTimestamp.values()], events: events.map((event) => ({
-          phase: event.phase,
-          enabled: Boolean(event.enabled),
-          ts: event.ts
-        })) });
+        resolve({
+          range: range.key,
+          bucketMs: range.bucketMs,
+          rows: [...byTimestamp.values()],
+          events: events.map((event) => ({ phase: event.phase, enabled: Boolean(event.enabled), ts: event.ts }))
+        });
       });
     });
   });
 }
 
-function totalPowerHistory(hours = 24) {
-  const safeHours = Math.min(Math.max(Number(hours) || 24, 1), 24 * 365);
-  const since = Date.now() - safeHours * 60 * 60 * 1000;
+function totalPowerHistory(rangeValue = '24h') {
+  const range = resolveHistoryRange(rangeValue);
+  const since = Date.now() - range.durationMs;
 
   return new Promise((resolve, reject) => {
-    db.all(`WITH latest_samples AS (
-              SELECT CAST(ts / 1000 AS INTEGER) AS time_bucket, device_id, MAX(ts) AS latest_ts
-              FROM meter_snapshots WHERE ts >= ? GROUP BY time_bucket, device_id
+    db.all(`WITH device_buckets AS (
+              SELECT CAST(ts / ? AS INTEGER) AS time_bucket,
+                     device_id,
+                     AVG(total_power_kw) AS device_power_kw
+              FROM meter_snapshots
+              WHERE ts >= ?
+              GROUP BY CAST(ts / ? AS INTEGER), device_id
             )
-            SELECT samples.time_bucket * 1000 AS ts,
-                   SUM(snapshots.total_power_kw) AS total_power_kw
-            FROM latest_samples AS samples
-            JOIN meter_snapshots AS snapshots
-              ON snapshots.device_id = samples.device_id AND snapshots.ts = samples.latest_ts
-            GROUP BY samples.time_bucket ORDER BY samples.time_bucket ASC`, [since], (err, rows) => {
-      if (err) reject(err); else resolve(rows);
+            SELECT time_bucket * ? AS ts,
+                   SUM(device_power_kw) AS total_power_kw
+            FROM device_buckets
+            GROUP BY time_bucket
+            ORDER BY time_bucket ASC`, [range.bucketMs, since, range.bucketMs, range.bucketMs], (err, rows) => {
+      if (err) reject(err); else resolve({ range: range.key, bucketMs: range.bucketMs, rows });
     });
   });
 }
@@ -544,8 +566,8 @@ app.get('/api/latest', async (request) => {
   const deviceId = request.query.deviceId || 'uwc-meter-001';
   return rowToApi(await latestReading(deviceId), deviceId);
 });
-app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', Number(request.query.hours || 24)));
-app.get('/api/history/total-power', async (request) => totalPowerHistory(Number(request.query.hours || 24)));
+app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', request.query.range));
+app.get('/api/history/total-power', async (request) => totalPowerHistory(request.query.range));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));
 app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
 

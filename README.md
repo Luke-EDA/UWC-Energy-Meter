@@ -2,7 +2,9 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.6: Phase Line Configuration
+## Version 1.5.7.1: Dark Mode Dropdown Fix
+
+Version 1.5.7.1 fixes the native graph-range dropdown menu in Dark Mode so every option remains readable on Windows Chromium-based browsers. This patch does not change graph ranges, loading, aggregation, or persistence behaviour.
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 
@@ -77,6 +79,11 @@ Version 1.5.5 adds shared site and tariff configuration to the main dashboard. T
 Version 1.5.3 adds a 24-hour historical graph to the main dashboard. It combines the latest stored reading from every measured device for each one-second interval and displays one Total Power line in kW. The graph appears below the summary cards and above the Devices area.
 
 The Total Power History and Devices sections can be collapsed independently. Both use `▼` while expanded and `▶` while collapsed, and both save their selected state locally in the browser. The graph is expanded by default for a first-time user and supports the existing Light and Dark themes.
+
+
+## Graph range selection (v1.5.7)
+
+Every historical graph includes its own temporary range selector with **24 hours**, **7 days**, **1 month**, **6 months**, and **1 year** options. Each selector defaults to 24 hours whenever the page is opened or refreshed and is intentionally not saved. Longer periods are aggregated by the server for responsive rendering, while disabled phase intervals remain true gaps instead of false zero readings.
 
 ## Phase line configuration (v1.5.6)
 
