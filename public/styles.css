@@ -706,41 +706,109 @@ body,
 }
 
 
-/* v1.5.8.2 device-specific energy summary */
-.device-energy-summary {
-  padding: 24px;
-  background: var(--panel);
+/* v1.5.8.2 device-specific energy summary
+   Mirrors the dashboard Energy Usage & Cost card. */
+.section-eyebrow {
+  margin: 0 0 3px;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.energy-summary-card {
+  padding: 22px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(24, 44, 72, 0.08);
+}
+
+.device-energy-summary-card {
+  margin-top: 22px;
+}
+
+[data-theme="dark"] .energy-summary-card {
   box-shadow: var(--shadow);
 }
 
-.device-energy-summary-header,
-.device-energy-summary-values {
+.energy-summary-header,
+.energy-summary-values {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
 }
 
-.device-energy-summary-header h2 { margin: 0; }
+.energy-summary-header h2 {
+  margin: 0;
+}
 
-.device-energy-summary-values {
+.energy-summary-values {
   margin-top: 22px;
   padding: 20px 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 
-.device-energy-summary-metric { flex: 1; min-width: 0; }
-.device-energy-summary-metric span { display: block; margin-bottom: 8px; color: var(--muted); font-weight: 700; }
-.device-energy-summary-metric strong { display: block; font-size: clamp(1.75rem, 3vw, 2.65rem); line-height: 1.1; }
-.device-energy-summary-divider { width: 1px; align-self: stretch; background: var(--border); }
-.device-energy-summary-period { margin: 14px 0 0; color: var(--muted); font-size: 0.92rem; }
+.energy-summary-metric {
+  flex: 1;
+  min-width: 0;
+}
+
+.energy-summary-metric span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.energy-summary-metric strong {
+  display: block;
+  font-size: clamp(1.75rem, 3vw, 2.65rem);
+  line-height: 1.1;
+}
+
+.energy-summary-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+}
+
+.energy-summary-period {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.energy-summary-card .chart-message {
+  min-height: 0;
+  margin: 0;
+  color: var(--muted);
+}
+
+.energy-summary-card .chart-message:not(:empty) {
+  margin-top: 12px;
+}
+
+.energy-summary-card .chart-message.error {
+  color: var(--danger);
+}
 
 @media (max-width: 720px) {
-  .device-energy-summary-header,
-  .device-energy-summary-values { align-items: stretch; flex-direction: column; }
-  .device-energy-summary-divider { width: 100%; height: 1px; }
-  .device-energy-summary-header .graph-range-control { justify-content: space-between; }
+  .energy-summary-header,
+  .energy-summary-values {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .energy-summary-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .energy-summary-header .graph-range-control {
+    justify-content: space-between;
+  }
 }

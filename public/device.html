@@ -70,10 +70,10 @@
         </article>
       </section>
 
-      <section class="device-energy-summary" aria-labelledby="deviceEnergySummaryTitle">
-        <div class="device-energy-summary-header">
+      <section class="energy-summary-card device-energy-summary-card" aria-labelledby="deviceEnergySummaryTitle">
+        <div class="energy-summary-header">
           <div>
-            <p class="eyebrow">Tariff summary</p>
+            <p class="section-eyebrow">Tariff summary</p>
             <h2 id="deviceEnergySummaryTitle">Energy Usage &amp; Cost</h2>
           </div>
           <label class="graph-range-control" for="deviceEnergySummaryRange">Range
@@ -85,19 +85,19 @@
             </select>
           </label>
         </div>
-        <div class="device-energy-summary-values">
-          <div class="device-energy-summary-metric">
+        <div class="energy-summary-values">
+          <div class="energy-summary-metric">
             <span>Power Usage</span>
             <strong id="deviceEnergyUsageValue">-- kWh</strong>
           </div>
-          <div class="device-energy-summary-divider" aria-hidden="true"></div>
-          <div class="device-energy-summary-metric">
+          <div class="energy-summary-divider" aria-hidden="true"></div>
+          <div class="energy-summary-metric">
             <span>Energy Cost</span>
             <strong id="deviceEnergyCostValue">--</strong>
           </div>
         </div>
-        <p id="deviceEnergySummaryPeriod" class="device-energy-summary-period">Loading current month…</p>
-        <p id="deviceEnergySummaryMessage" class="chart-status" role="status" aria-live="polite"></p>
+        <p id="deviceEnergySummaryPeriod" class="energy-summary-period">Loading current month…</p>
+        <p id="deviceEnergySummaryMessage" class="chart-message" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel">
@@ -170,7 +170,7 @@
             </label>
           </div>
         </div>
-        <div id="deviceHistoryMessage" class="chart-status" role="status" aria-live="polite">Loading power history…</div>
+        <div id="deviceHistoryMessage" class="chart-message" role="status" aria-live="polite">Loading power history…</div>
         <div class="chart-wrap">
           <canvas id="powerChart"></canvas>
         </div>

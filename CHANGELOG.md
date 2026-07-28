@@ -1,5 +1,7 @@
 ## [1.5.8.2] - Device Energy Usage & Cost Summary
 
+- Corrected the Device Details Energy Usage & Cost card to match the dashboard card structure, spacing, typography, controls, responsive layout, and theme appearance.
+
 ### Added
 - An Energy Usage & Cost card on the Device Details page.
 - Device-specific Current Month, Last Month, Last 6 Months and Last Year selections.
