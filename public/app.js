@@ -13,6 +13,8 @@ let pendingPhaseConfig = null;
 let currentHistoryRange = '24h';
 let currentHistoryRows = [];
 let historyRefreshTimer = null;
+let currentEnergySummaryRange = 'current-month';
+let energySummaryRefreshTimer = null;
 
 function defaultPhaseConfig() {
   return {
@@ -124,7 +126,6 @@ function applyPhaseConfig(config) {
   PHASES.forEach((phase) => {
     const enabled = phaseConfig[phase].enabled;
     byId(`${phase}Title`).textContent = phaseDisplayName(phase);
-    byId(`${phase}SummaryHeader`).textContent = phaseDisplayName(phase);
     byId(`${phase}Card`).classList.toggle('is-disabled', !enabled);
     byId(`${phase}Card`).querySelector('.measurement-list').hidden = !enabled;
     byId(`${phase}Disabled`).hidden = enabled;
@@ -160,17 +161,67 @@ function updateLive(data) {
   });
 }
 
-async function loadSummary() {
-  const rows = await getJson(apiUrl('/api/summary'));
-  const tbody = byId('summaryTable').querySelector('tbody');
-  tbody.innerHTML = rows.map((row) => `
-    <tr>
-      <td>${row.period.label}</td>
-      <td>${fmt(row.l1Kwh, 2)} kWh</td>
-      <td>${fmt(row.l2Kwh, 2)} kWh</td>
-      <td>${fmt(row.l3Kwh, 2)} kWh</td>
-      <td><strong>${fmt(row.totalKwh, 2)} kWh</strong></td>
-    </tr>`).join('');
+function formatEnergy(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-- kWh';
+  return `${new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)} kWh`;
+}
+
+function formatCurrency(value, currency) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '--';
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency || 'ZAR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(number);
+  } catch (error) {
+    return `${currency || ''} ${number.toFixed(2)}`.trim();
+  }
+}
+
+function formatEnergyPeriod(startValue, endValue, isLive) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  const dateOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+  const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+  const startText = `${start.toLocaleDateString([], dateOptions)} ${start.toLocaleTimeString([], timeOptions)}`;
+  if (isLive) return `${startText} – Present`;
+  const inclusiveEnd = new Date(end.getTime() - 1);
+  return `${startText} – ${inclusiveEnd.toLocaleDateString([], dateOptions)} 23:59`;
+}
+
+async function loadDeviceEnergySummary(range = currentEnergySummaryRange, silent = false) {
+  const supported = new Set(['current-month', 'last-month', 'last-6-months', 'last-year']);
+  currentEnergySummaryRange = supported.has(range) ? range : 'current-month';
+  byId('deviceEnergySummaryRange').value = currentEnergySummaryRange;
+  const message = byId('deviceEnergySummaryMessage');
+  if (!silent) message.textContent = 'Calculating energy usage…';
+  message.classList.remove('error');
+
+  try {
+    const summary = await getJson(apiUrl('/api/energy-summary', { range: currentEnergySummaryRange }));
+    byId('deviceEnergyUsageValue').textContent = formatEnergy(summary.energyKwh);
+    byId('deviceEnergyCostValue').textContent = summary.cost === null
+      ? 'Tariff not configured'
+      : formatCurrency(summary.cost, summary.currency);
+    byId('deviceEnergySummaryPeriod').textContent = formatEnergyPeriod(summary.start, summary.end, summary.isLive);
+    message.textContent = '';
+  } catch (error) {
+    message.textContent = `Unable to calculate energy usage and cost: ${error.message}`;
+    message.classList.add('error');
+  }
+}
+
+function bindEnergySummaryRange() {
+  byId('deviceEnergySummaryRange').addEventListener('change', (event) => {
+    loadDeviceEnergySummary(event.target.value);
+  });
+  energySummaryRefreshTimer = window.setInterval(() => {
+    if (currentEnergySummaryRange === 'current-month') loadDeviceEnergySummary(currentEnergySummaryRange, true);
+  }, 60_000);
 }
 
 const RANGE_LABELS = Object.freeze({
@@ -379,6 +430,7 @@ function bindPhaseDialog() {
 async function initialise() {
   bindPhaseDialog();
   bindHistoryRange();
+  bindEnergySummaryRange();
   if (!selectedDeviceId) {
     setPageError('No device was selected. Return to the dashboard and choose a device.');
     updateDeviceName('No Device Selected');
@@ -394,8 +446,7 @@ async function initialise() {
 
   const latest = await getJson(apiUrl('/api/latest'));
   await loadHistory('24h');
-  await loadSummary();
-  window.setInterval(loadSummary, 60_000);
+  await loadDeviceEnergySummary('current-month');
 
   if (selectedDevice.enabled === false) {
     setDisabledState();

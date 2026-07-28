@@ -2,9 +2,9 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.5.8: Energy Usage & Cost Summary
+## Version 1.5.8.2: Device Energy Usage & Cost Summary
 
-Version 1.5.8 adds a dashboard card that calculates site-wide energy usage in kWh and estimates energy cost using the tariff saved in Site Options. The selectable periods are Current Month, Last Month, Last 6 Months and Last Year, aligned to local calendar-month boundaries. Last 6 Months and Last Year cover the previous 6 or 12 complete calendar months ending on the final day of the previous month. Current Month refreshes continuously; completed periods remain static until selected again.
+Version 1.5.8.2 extends the Energy Usage & Cost Summary to the Device Details page, allowing the usage and estimated cost of an individual device to be checked using the same tariff saved in Site Options. The site-wide dashboard summary remains unchanged. The selectable periods are Current Month, Last Month, Last 6 Months and Last Year, aligned to local calendar-month boundaries. Last 6 Months and Last Year cover the previous 6 or 12 complete calendar months ending on the final day of the previous month. Current Month refreshes continuously; completed periods remain static until selected again.
 
 The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
 

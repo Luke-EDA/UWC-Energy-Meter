@@ -27,7 +27,7 @@
           </button>
           <span class="theme-toggle-label">Toggle Dark Mode</span>
         </div>
-        <div class="version-chip">v1.5.8</div>
+        <div class="version-chip">v1.5.8.2</div>
       </div>
     </nav>
 
@@ -68,6 +68,36 @@
           <span>Last Update</span>
           <strong id="lastUpdate">--:--:--</strong>
         </article>
+      </section>
+
+      <section class="device-energy-summary" aria-labelledby="deviceEnergySummaryTitle">
+        <div class="device-energy-summary-header">
+          <div>
+            <p class="eyebrow">Tariff summary</p>
+            <h2 id="deviceEnergySummaryTitle">Energy Usage &amp; Cost</h2>
+          </div>
+          <label class="graph-range-control" for="deviceEnergySummaryRange">Range
+            <select id="deviceEnergySummaryRange">
+              <option value="current-month" selected>Current Month</option>
+              <option value="last-month">Last Month</option>
+              <option value="last-6-months">Last 6 Months</option>
+              <option value="last-year">Last Year</option>
+            </select>
+          </label>
+        </div>
+        <div class="device-energy-summary-values">
+          <div class="device-energy-summary-metric">
+            <span>Power Usage</span>
+            <strong id="deviceEnergyUsageValue">-- kWh</strong>
+          </div>
+          <div class="device-energy-summary-divider" aria-hidden="true"></div>
+          <div class="device-energy-summary-metric">
+            <span>Energy Cost</span>
+            <strong id="deviceEnergyCostValue">--</strong>
+          </div>
+        </div>
+        <p id="deviceEnergySummaryPeriod" class="device-energy-summary-period">Loading current month…</p>
+        <p id="deviceEnergySummaryMessage" class="chart-status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel">
@@ -118,23 +148,6 @@
             </dl>
             <div id="l3Disabled" class="phase-disabled" hidden><span class="disabled-indicator"></span><strong>Disabled</strong></div>
           </article>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Calculated consumption</p>
-            <h2>Energy Summary</h2>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table id="summaryTable">
-            <thead>
-              <tr><th>Period</th><th id="l1SummaryHeader">L1</th><th id="l2SummaryHeader">L2</th><th id="l3SummaryHeader">L3</th><th>Total</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
         </div>
       </section>
 

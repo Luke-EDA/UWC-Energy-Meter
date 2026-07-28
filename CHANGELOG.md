@@ -1,3 +1,15 @@
+## [1.5.8.2] - Device Energy Usage & Cost Summary
+
+### Added
+- An Energy Usage & Cost card on the Device Details page.
+- Device-specific Current Month, Last Month, Last 6 Months and Last Year selections.
+- Device-only kWh integration and tariff-based cost calculation through the existing energy-summary API.
+
+### Changed
+- The Device Details page now places accumulated usage and cost below the whole-device overview cards and above the live phase readings.
+- Current Month refreshes automatically while completed historical ranges remain static after loading.
+- Updated application version and build metadata to 1.5.8.2.
+
 # Changelog
 
 ## 1.5.8 - Energy Usage & Cost Summary

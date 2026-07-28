@@ -424,7 +424,7 @@ function integrateDevicePowerRows(rows, startMs, endMs, maxGapMs) {
   return energyKwh;
 }
 
-async function getEnergyCostSummary(rangeValue = 'current-month') {
+async function getEnergyCostSummary(rangeValue = 'current-month', deviceId = null) {
   const range = resolveEnergySummaryRange(rangeValue);
   const durationMs = range.endMs - range.startMs;
   const bucketMs = durationMs > 200 * 24 * 60 * 60 * 1000
@@ -437,14 +437,19 @@ async function getEnergyCostSummary(rangeValue = 'current-month') {
   const queryEnd = range.endMs + (range.isLive ? 0 : maxGapMs);
 
   const rows = await new Promise((resolve, reject) => {
+    const deviceFilter = deviceId ? ' AND device_id = ?' : '';
+    const parameters = [bucketMs, bucketMs, queryStart, queryEnd];
+    if (deviceId) parameters.push(deviceId);
+    parameters.push(bucketMs);
+
     db.all(`SELECT CAST(ts / ? AS INTEGER) * ? AS ts,
                    device_id,
                    AVG(total_power_kw) AS total_power_kw
             FROM meter_snapshots
-            WHERE ts >= ? AND ts <= ?
+            WHERE ts >= ? AND ts <= ?${deviceFilter}
             GROUP BY CAST(ts / ? AS INTEGER), device_id
             ORDER BY device_id, ts ASC`,
-      [bucketMs, bucketMs, queryStart, queryEnd, bucketMs],
+      parameters,
       (error, result) => error ? reject(error) : resolve(result));
   });
 
@@ -466,6 +471,7 @@ async function getEnergyCostSummary(rangeValue = 'current-month') {
   return {
     range: range.key,
     label: range.label,
+    deviceId: deviceId || null,
     start: new Date(range.startMs).toISOString(),
     end: new Date(range.endMs).toISOString(),
     isLive: range.isLive,
@@ -682,7 +688,7 @@ app.get('/api/latest', async (request) => {
 });
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', request.query.range));
 app.get('/api/history/total-power', async (request) => totalPowerHistory(request.query.range));
-app.get('/api/energy-summary', async (request) => getEnergyCostSummary(request.query.range));
+app.get('/api/energy-summary', async (request) => getEnergyCostSummary(request.query.range, request.query.deviceId || null));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));
 app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
 
