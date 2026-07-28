@@ -6,6 +6,7 @@ const { createProvider, isSupported, listProviders } = require('./providerFactor
 
 const CONFIG_FILE = path.join(__dirname, '../config/devices.json');
 const SCHEDULER_INTERVAL_MS = 100;
+const PHASE_KEYS = ['l1', 'l2', 'l3'];
 
 class DeviceManager {
   constructor() {
@@ -40,6 +41,19 @@ class DeviceManager {
           ...(device.slaveId ? { legacySlaveId: Number(device.slaveId) } : {})
         };
 
+    const storedPhaseConfig = device.phaseConfig && typeof device.phaseConfig === 'object'
+      ? device.phaseConfig
+      : {};
+    const phaseConfig = Object.fromEntries(PHASE_KEYS.map((phase) => {
+      const stored = storedPhaseConfig[phase] && typeof storedPhaseConfig[phase] === 'object'
+        ? storedPhaseConfig[phase]
+        : {};
+      return [phase, {
+        enabled: stored.enabled !== false,
+        label: String(stored.label || '').trim().slice(0, 50)
+      }];
+    }));
+
     return {
       id: Number(device.id),
       name: String(device.name),
@@ -47,7 +61,8 @@ class DeviceManager {
       enabled: device.enabled !== false,
       pollInterval: Number(device.pollInterval || 1000),
       connection,
-      providerOptions
+      providerOptions,
+      phaseConfig
     };
   }
 
@@ -106,7 +121,8 @@ class DeviceManager {
       enabled: device.enabled,
       pollInterval: device.pollInterval,
       connection: device.connection,
-      providerOptions: device.providerOptions
+      providerOptions: device.providerOptions,
+      phaseConfig: device.phaseConfig
     }));
 
     const temporaryFile = `${CONFIG_FILE}.tmp`;
@@ -155,6 +171,7 @@ class DeviceManager {
     existing.providerOptions = updated.providerOptions;
     existing.pollInterval = updated.pollInterval;
     existing.enabled = updated.enabled;
+    existing.phaseConfig = updated.phaseConfig;
 
     if (recreateProvider) existing.providerInstance = createProvider(existing);
     existing.latestData = existing.enabled && !recreateProvider ? existing.latestData : null;
@@ -187,6 +204,13 @@ class DeviceManager {
     const providerOptions = input.providerOptions && typeof input.providerOptions === 'object'
       ? { ...input.providerOptions }
       : {};
+    const existingPhaseConfig = excludedId === null
+      ? {}
+      : (this.findRuntimeDevice(excludedId)?.phaseConfig || {});
+    const suppliedPhaseConfig = input.phaseConfig && typeof input.phaseConfig === 'object'
+      ? input.phaseConfig
+      : existingPhaseConfig;
+    const phaseConfig = this.validatePhaseConfig(suppliedPhaseConfig);
 
     if (name.length < 2 || name.length > 80) {
       throw new Error('Device name must be between 2 and 80 characters.');
@@ -210,8 +234,35 @@ class DeviceManager {
       enabled,
       pollInterval,
       connection: { host },
-      providerOptions
+      providerOptions,
+      phaseConfig
     };
+  }
+
+  validatePhaseConfig(input = {}) {
+    return Object.fromEntries(PHASE_KEYS.map((phase) => {
+      const value = input[phase] && typeof input[phase] === 'object' ? input[phase] : {};
+      const label = String(value.label || '').trim();
+      if (label.length > 50) throw new Error(`${phase.toUpperCase()} label must be 50 characters or fewer.`);
+      return [phase, { enabled: value.enabled !== false, label }];
+    }));
+  }
+
+  updatePhaseConfig(id, input = {}) {
+    const existing = this.findRuntimeDevice(id);
+    if (!existing) throw new Error('Device not found.');
+    existing.phaseConfig = this.validatePhaseConfig(input);
+    this.saveDevices();
+    return this.toPublicDevice(existing);
+  }
+
+  findRuntimeDeviceByName(name) {
+    const target = String(name || '').toLowerCase();
+    return this.devices.find((device) => device.name.toLowerCase() === target);
+  }
+
+  getPhaseConfigByName(name) {
+    return this.findRuntimeDeviceByName(name)?.phaseConfig || this.validatePhaseConfig({});
   }
 
   toPublicDevice(device) {
@@ -225,6 +276,7 @@ class DeviceManager {
       connection: { ...device.connection },
       ipAddress: device.connection?.host || '', // Compatibility alias.
       providerOptions: { ...device.providerOptions },
+      phaseConfig: JSON.parse(JSON.stringify(device.phaseConfig)),
       status: device.enabled ? device.status : 'disabled',
       statusMessage: device.enabled ? device.statusMessage : 'Device is disabled',
       lastAttempt: device.lastAttempt,

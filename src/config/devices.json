@@ -8,7 +8,21 @@
     "connection": {
       "host": "192.168.1.100"
     },
-    "providerOptions": {}
+    "providerOptions": {},
+    "phaseConfig": {
+      "l1": {
+        "enabled": true,
+        "label": ""
+      },
+      "l2": {
+        "enabled": true,
+        "label": ""
+      },
+      "l3": {
+        "enabled": true,
+        "label": ""
+      }
+    }
   },
   {
     "id": 2,
@@ -19,7 +33,21 @@
     "connection": {
       "host": "192.168.1.101"
     },
-    "providerOptions": {}
+    "providerOptions": {},
+    "phaseConfig": {
+      "l1": {
+        "enabled": true,
+        "label": ""
+      },
+      "l2": {
+        "enabled": true,
+        "label": ""
+      },
+      "l3": {
+        "enabled": true,
+        "label": ""
+      }
+    }
   },
   {
     "id": 3,
@@ -30,6 +58,20 @@
     "connection": {
       "host": "192.168.1.102"
     },
-    "providerOptions": {}
+    "providerOptions": {},
+    "phaseConfig": {
+      "l1": {
+        "enabled": true,
+        "label": ""
+      },
+      "l2": {
+        "enabled": true,
+        "label": ""
+      },
+      "l3": {
+        "enabled": true,
+        "label": ""
+      }
+    }
   }
 ]

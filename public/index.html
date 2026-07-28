@@ -7,6 +7,7 @@
   <title>UWC Energy Monitor</title>
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -16,6 +17,7 @@
         <h1>Energy Monitor</h1>
       </div>
       <div class="topbar-controls">
+        <button id="optionsButton" class="header-button" type="button">Options</button>
         <div class="theme-control">
           <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
             <span class="theme-toggle-track" aria-hidden="true">
@@ -31,12 +33,17 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.5.1</strong>
+          <strong>v1.5.8</strong>
         </div>
       </div>
     </header>
 
     <main class="content">
+      <section id="siteNameBanner" class="site-name-banner" aria-label="Site name" hidden>
+        <p class="section-eyebrow">Monitoring site</p>
+        <h2 id="siteNameDisplay"></h2>
+      </section>
+
       <section class="summary-grid" aria-label="System summary">
         <article class="summary-card"><span class="summary-label">Devices</span><strong id="deviceCount" class="summary-value">--</strong></article>
         <article class="summary-card"><span class="summary-label">Online</span><strong id="onlineCount" class="summary-value">--</strong></article>
@@ -45,20 +52,125 @@
         <article class="summary-card"><span class="summary-label">Last Update</span><strong id="lastUpdate" class="summary-value summary-time">--:--:--</strong></article>
       </section>
 
+      <section class="energy-summary-card" aria-labelledby="energySummaryTitle">
+        <div class="energy-summary-header">
+          <div>
+            <p class="section-eyebrow">Tariff summary</p>
+            <h2 id="energySummaryTitle">Energy Usage &amp; Cost</h2>
+          </div>
+          <label class="graph-range-control" for="energySummaryRange">Range
+            <select id="energySummaryRange">
+              <option value="current-month" selected>Current Month</option>
+              <option value="last-month">Last Month</option>
+              <option value="last-6-months">Last 6 Months</option>
+              <option value="last-year">Last Year</option>
+            </select>
+          </label>
+        </div>
+        <div class="energy-summary-values">
+          <div class="energy-summary-metric">
+            <span>Power Usage</span>
+            <strong id="energyUsageValue">-- kWh</strong>
+          </div>
+          <div class="energy-summary-divider" aria-hidden="true"></div>
+          <div class="energy-summary-metric">
+            <span>Energy Cost</span>
+            <strong id="energyCostValue">--</strong>
+          </div>
+        </div>
+        <p id="energySummaryPeriod" class="energy-summary-period">Loading current month…</p>
+        <p id="energySummaryMessage" class="chart-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="history-section" aria-labelledby="historySectionTitle">
+        <button id="historySectionToggle" class="section-toggle" type="button" aria-expanded="true" aria-controls="historySectionContent">
+          <span id="historySectionIndicator" class="section-toggle-indicator" aria-hidden="true">▼</span>
+          <span><span class="section-eyebrow">Combined site load</span><span id="historySectionTitle" class="section-title">Total Power History</span></span>
+        </button>
+        <div id="historySectionContent" class="collapsible-section is-expanded">
+          <div class="collapsible-section-inner">
+            <div class="history-chart-panel">
+              <div class="graph-toolbar">
+                <label class="graph-range-control" for="totalPowerRange">Range
+                  <select id="totalPowerRange">
+                    <option value="24h" selected>24 hours</option>
+                    <option value="7d">7 days</option>
+                    <option value="1m">1 month</option>
+                    <option value="6m">6 months</option>
+                    <option value="1y">1 year</option>
+                  </select>
+                </label>
+              </div>
+              <div id="historyMessage" class="chart-message" role="status" aria-live="polite">Loading total power history…</div>
+              <div class="history-chart-wrap"><canvas id="totalPowerHistoryChart" aria-label="Total power history across all devices"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="dashboard-actions" aria-label="Dashboard actions">
-        <div><p class="section-eyebrow">Connected equipment</p><h2>Devices</h2></div>
+        <button id="deviceSectionToggle" class="section-toggle" type="button" aria-expanded="true" aria-controls="deviceSectionContent">
+          <span id="deviceSectionIndicator" class="section-toggle-indicator" aria-hidden="true">▼</span>
+          <span><span class="section-eyebrow">Connected equipment</span><span class="section-title">Devices</span></span>
+        </button>
         <button id="addDeviceButton" class="primary-button" type="button">+ Add Device</button>
       </section>
 
-      <div id="dashboardMessage" class="message" role="status" aria-live="polite">Loading devices…</div>
-      <section id="deviceGrid" class="device-grid" aria-label="Connected devices"></section>
+      <div id="deviceSectionContent" class="collapsible-section is-expanded">
+        <div class="collapsible-section-inner">
+          <div id="dashboardMessage" class="message" role="status" aria-live="polite">Loading devices…</div>
+          <section id="deviceGrid" class="device-grid" aria-label="Connected devices"></section>
+        </div>
+      </div>
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.1 · Appearance & User Experience</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.8 · Energy Usage & Cost Summary</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
+
+
+  <dialog id="optionsDialog" class="modal">
+    <form id="optionsForm" class="modal-card">
+      <div class="modal-heading">
+        <div><p class="section-eyebrow">Dashboard settings</p><h2>Site Options</h2></div>
+        <button id="closeOptionsDialog" class="icon-button" type="button" aria-label="Close options dialog">×</button>
+      </div>
+
+      <div class="form-grid">
+        <label class="form-field form-field-wide">
+          <span>Site Name</span>
+          <input id="siteNameInput" name="siteName" type="text" maxlength="120" placeholder="e.g. UWC Main Campus">
+          <small>Displayed above the live dashboard readings. Leave blank to hide it.</small>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Currency</span>
+          <select id="currencyInput" name="currency" required>
+            <option value="ZAR">🇿🇦 ZAR — South African Rand</option>
+            <option value="USD">🇺🇸 USD — US Dollar</option>
+            <option value="EUR">🇪🇺 EUR — Euro</option>
+            <option value="GBP">🇬🇧 GBP — British Pound</option>
+          </select>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Price per kWh</span>
+          <div class="input-with-unit price-input">
+            <span id="currencySymbol" aria-hidden="true">R</span>
+            <input id="pricePerKwhInput" name="pricePerKwh" type="number" min="0" step="0.0001" inputmode="decimal" placeholder="e.g. 2.7500">
+            <span>/ kWh</span>
+          </div>
+          <small>Saved for future energy-cost calculations.</small>
+        </label>
+      </div>
+
+      <div id="optionsMessage" class="form-message" role="status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button id="cancelOptions" class="secondary-button" type="button">Cancel</button>
+        <button id="saveOptionsButton" class="primary-button" type="submit">Save Options</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="deviceDialog" class="modal">
     <form id="deviceForm" class="modal-card">

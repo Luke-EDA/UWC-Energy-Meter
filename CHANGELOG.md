@@ -1,4 +1,88 @@
+## [1.5.8.2] - Device Energy Usage & Cost Summary
+
+- Corrected the Device Details Energy Usage & Cost card to match the dashboard card structure, spacing, typography, controls, responsive layout, and theme appearance.
+
+### Added
+- An Energy Usage & Cost card on the Device Details page.
+- Device-specific Current Month, Last Month, Last 6 Months and Last Year selections.
+- Device-only kWh integration and tariff-based cost calculation through the existing energy-summary API.
+
+### Changed
+- The Device Details page now places accumulated usage and cost below the whole-device overview cards and above the live phase readings.
+- Current Month refreshes automatically while completed historical ranges remain static after loading.
+- Updated application version and build metadata to 1.5.8.2.
+
 # Changelog
+
+## 1.5.8 - Energy Usage & Cost Summary
+
+- Added a dashboard Energy Usage & Cost card beneath the Live Readings cards.
+- Added Current Month, Last Month, Last 6 Months and Last Year calendar-aligned ranges. Last 6 Months and Last Year use the previous 6 or 12 complete calendar months ending at the start of the current month.
+- Calculates site-wide energy usage in kWh by integrating stored power readings while avoiding long missing-data gaps.
+- Calculates energy cost using the saved v1.5.5 tariff and selected currency.
+- Current Month updates continuously; completed historical periods load only when selected.
+- Shows the exact local calendar period used for each calculation.
+- Displays energy usage even when no tariff is configured.
+
+## 1.5.7.1 - Dark Mode Dropdown Fix
+
+- Fixed graph range dropdown options rendering as white text on a white background in Dark Mode on Windows Chromium-based browsers.
+- Added explicit dark backgrounds and high-contrast text colours to the range selector and its native options.
+- Added a dark colour-scheme hint for more consistent native menu rendering.
+- No changes were made to graph data, range selection behaviour, or persistence.
+
+## 1.5.7 - Graph Range Selection
+
+- Added independent range dropdowns to the dashboard Total Power History graph and Device Details power graph.
+- Added selectable ranges for 24 hours, 7 days, 1 month, 6 months and 1 year.
+- Kept 24 hours as the default whenever a page is opened or refreshed; range selections are not persisted.
+- Added server-side time-window validation and aggregation to keep long-range graphs responsive.
+- Added range-aware date labels and full timestamps in chart tooltips.
+- Preserved disabled-phase gaps and all existing historical readings across every range.
+- Added graph-level loading, empty-data and error messages.
+
+### v1.5.6 hotfix 2
+- Fixed active phase cards incorrectly showing the Disabled status.
+- Ensured the disabled status is only rendered when a phase is actually disabled.
+
+
+## 1.5.5 - Site & Tariff Options
+
+- Added an Options button to the main dashboard header.
+- Added a responsive, Light/Dark theme-compatible Site Options dialog.
+- Added a persistent Site Name setting that appears above the live reading cards and is completely hidden when blank.
+- Added a currency selector that defaults to South African Rand (`🇿🇦 ZAR`) and includes ZAR, USD, EUR and GBP.
+- Added an optional non-negative Price per kWh setting for future energy-cost calculations.
+- Added `GET /api/settings` and `PUT /api/settings` endpoints.
+- Stored shared application settings in SQLite so they remain consistent across browsers and computers.
+- Added server-side validation for site name, currency and tariff values.
+
+## 1.5.4 - Phase Colour Alignment
+
+- Added reusable application phase colour variables: L1 red (`#D32F2F`), L2 yellow (`#FBC02D`), and L3 blue (`#1976D2`).
+- Updated the top accent bars on the Device Details L1, L2 and L3 cards to use the standard phase colours.
+- Updated the Device Details historical power graph so each phase trace matches its corresponding card colour.
+- Kept the dashboard Total Power History graph on the primary application accent because it represents combined power rather than an individual phase.
+- Preserved phase colours in both Light and Dark themes.
+
+## 1.5.3 - Dashboard Total Power History
+
+- Added a 24-hour Total Power History graph to the main dashboard below the summary cards and above the Devices area.
+- Added a backend endpoint that aggregates the latest reading from every measured device into one total-power value per second.
+- Added a single Total Power line without separate phase lines.
+- Made the history graph section independently collapsible with `▼` and `▶` indicators.
+- Stored the history section state in browser `localStorage`, independently of the Devices section.
+- Added responsive graph sizing, automatic history refresh, and Light/Dark theme support.
+
+## 1.5.2 - Collapsible Device Section
+
+- Added an accessible expand/collapse control to the Devices header on the dashboard.
+- Added clear expanded (`▼`) and collapsed (`▶`) indicators.
+- Made the full Devices heading area clickable for easier mouse and touch use.
+- Added a subtle collapse and fade transition while removing the hidden cards from the page layout.
+- Stored the selected section state in browser `localStorage` so it persists across navigation, refreshes and browser restarts.
+- Kept the Add Device action visible while the device cards are collapsed.
+- Prepared dashboard space for the next v1.5.x element.
 
 ## 1.5.1 - Appearance & User Experience
 
@@ -107,3 +191,20 @@
 - System summary tiles and live device cards.
 - Click-through navigation to the device details page.
 - Add Device placeholder dialog.
+
+## [1.5.6] - Phase Line Configuration
+
+### Added
+- Per-device optional labels for L1, L2 and L3.
+- An **Edit Phase Lines** dialog on the Device Details page.
+- Independent metering enable/disable controls for every phase.
+- Confirmation before one or more active phases are disabled.
+- Phase-coloured label inputs matching the L1, L2 and L3 display accents.
+- Persistent phase configuration and phase enable/disable event timestamps.
+
+### Changed
+- Disabled phase cards remain visible and show a compact disabled status.
+- Live totals and new energy summaries exclude disabled phases.
+- Historical phase data remains visible after a phase is disabled.
+- Disabled intervals appear as graph gaps rather than false zero readings.
+- New readings are stored in phase-normalised tables, so disabled phases do not create measurement records.
