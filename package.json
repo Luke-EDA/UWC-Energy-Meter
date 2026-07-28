@@ -1,6 +1,6 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.5.8.2",
+  "version": "1.6.0",
   "description": "Protocol-agnostic multi-device dashboard with calendar-based energy usage and tariff cost summaries.",
   "main": "src/server.js",
   "scripts": {

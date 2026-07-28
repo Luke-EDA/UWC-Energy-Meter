@@ -1,3 +1,21 @@
+## v1.6.0
+
+Major stable release merging the complete v1.5.x dashboard refinement series into main.
+
+### Highlights
+
+- Collapsible dashboard device section
+- Dashboard Total Power History graph
+- Standard three-phase colours
+- Site name, currency and tariff settings
+- Per-phase labels and metering enable/disable controls
+- Historical graph range selection
+- Dashboard energy usage and cost summary
+- Device-specific energy usage and cost summary
+- Dark Mode refinements
+- SQLite stability fixes
+- UI consistency and layout improvements
+
 ## [1.5.8.2] - Device Energy Usage & Cost Summary
 
 - Corrected the Device Details Energy Usage & Cost card to match the dashboard card structure, spacing, typography, controls, responsive layout, and theme appearance.
