@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.8 - Energy Usage & Cost Summary
+
+- Added a dashboard Energy Usage & Cost card beneath the Live Readings cards.
+- Added Current Month, Last Month, Last 6 Months and Last Year calendar-aligned ranges. Last 6 Months and Last Year use the previous 6 or 12 complete calendar months ending at the start of the current month.
+- Calculates site-wide energy usage in kWh by integrating stored power readings while avoiding long missing-data gaps.
+- Calculates energy cost using the saved v1.5.5 tariff and selected currency.
+- Current Month updates continuously; completed historical periods load only when selected.
+- Shows the exact local calendar period used for each calculation.
+- Displays energy usage even when no tariff is configured.
+
 ## 1.5.7.1 - Dark Mode Dropdown Fix
 
 - Fixed graph range dropdown options rendering as white text on a white background in Dark Mode on Windows Chromium-based browsers.

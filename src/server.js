@@ -362,6 +362,120 @@ function totalPowerHistory(rangeValue = '24h') {
   });
 }
 
+
+const ENERGY_SUMMARY_RANGES = Object.freeze({
+  'current-month': 'Current Month',
+  'last-month': 'Last Month',
+  'last-6-months': 'Last 6 Months',
+  'last-year': 'Last Year'
+});
+
+function resolveEnergySummaryRange(value) {
+  const key = ENERGY_SUMMARY_RANGES[String(value || 'current-month').toLowerCase()]
+    ? String(value || 'current-month').toLowerCase()
+    : 'current-month';
+  const now = new Date();
+  let start;
+  let end;
+
+  if (key === 'last-month') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  } else if (key === 'last-6-months') {
+    start = new Date(now.getFullYear(), now.getMonth() - 6, 1, 0, 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  } else if (key === 'last-year') {
+    // Previous 12 complete calendar months, ending at the start of the current month.
+    start = new Date(now.getFullYear(), now.getMonth() - 12, 1, 0, 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  } else {
+    start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    end = now;
+  }
+
+  return {
+    key,
+    label: ENERGY_SUMMARY_RANGES[key],
+    startMs: start.getTime(),
+    endMs: end.getTime(),
+    isLive: key === 'current-month'
+  };
+}
+
+function integrateDevicePowerRows(rows, startMs, endMs, maxGapMs) {
+  if (!rows || rows.length < 2) return 0;
+  let energyKwh = 0;
+
+  for (let index = 1; index < rows.length; index += 1) {
+    const previous = rows[index - 1];
+    const current = rows[index];
+    const rawGap = current.ts - previous.ts;
+    if (rawGap <= 0 || rawGap > maxGapMs) continue;
+
+    const segmentStart = Math.max(previous.ts, startMs);
+    const segmentEnd = Math.min(current.ts, endMs);
+    if (segmentEnd <= segmentStart) continue;
+
+    const durationHours = (segmentEnd - segmentStart) / 3600000;
+    const averagePowerKw = (Number(previous.total_power_kw) + Number(current.total_power_kw)) / 2;
+    if (Number.isFinite(averagePowerKw)) energyKwh += averagePowerKw * durationHours;
+  }
+
+  return energyKwh;
+}
+
+async function getEnergyCostSummary(rangeValue = 'current-month') {
+  const range = resolveEnergySummaryRange(rangeValue);
+  const durationMs = range.endMs - range.startMs;
+  const bucketMs = durationMs > 200 * 24 * 60 * 60 * 1000
+    ? 60 * 60 * 1000
+    : durationMs > 45 * 24 * 60 * 60 * 1000
+      ? 30 * 60 * 1000
+      : 5 * 60 * 1000;
+  const maxGapMs = Math.max(5 * 60 * 1000, bucketMs * 3);
+  const queryStart = range.startMs - maxGapMs;
+  const queryEnd = range.endMs + (range.isLive ? 0 : maxGapMs);
+
+  const rows = await new Promise((resolve, reject) => {
+    db.all(`SELECT CAST(ts / ? AS INTEGER) * ? AS ts,
+                   device_id,
+                   AVG(total_power_kw) AS total_power_kw
+            FROM meter_snapshots
+            WHERE ts >= ? AND ts <= ?
+            GROUP BY CAST(ts / ? AS INTEGER), device_id
+            ORDER BY device_id, ts ASC`,
+      [bucketMs, bucketMs, queryStart, queryEnd, bucketMs],
+      (error, result) => error ? reject(error) : resolve(result));
+  });
+
+  const byDevice = new Map();
+  for (const row of rows) {
+    if (!byDevice.has(row.device_id)) byDevice.set(row.device_id, []);
+    byDevice.get(row.device_id).push(row);
+  }
+
+  let energyKwh = 0;
+  for (const deviceRows of byDevice.values()) {
+    energyKwh += integrateDevicePowerRows(deviceRows, range.startMs, range.endMs, maxGapMs);
+  }
+
+  const settings = await getSettings();
+  const tariff = settings.pricePerKwh;
+  const cost = tariff === null ? null : energyKwh * tariff;
+
+  return {
+    range: range.key,
+    label: range.label,
+    start: new Date(range.startMs).toISOString(),
+    end: new Date(range.endMs).toISOString(),
+    isLive: range.isLive,
+    energyKwh,
+    tariff,
+    currency: settings.currency,
+    cost
+  };
+}
+
 function energySummary(deviceId = 'uwc-meter-001') {
   const periods = [
     { key: 'last24h', label: 'Last 24 hours', hours: 24 },
@@ -568,6 +682,7 @@ app.get('/api/latest', async (request) => {
 });
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', request.query.range));
 app.get('/api/history/total-power', async (request) => totalPowerHistory(request.query.range));
+app.get('/api/energy-summary', async (request) => getEnergyCostSummary(request.query.range));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));
 app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
 

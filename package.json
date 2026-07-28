@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.5.7.1",
-  "description": "Protocol-agnostic multi-device dashboard with selectable graph history ranges and per-phase metering controls.",
+  "version": "1.5.8",
+  "description": "Protocol-agnostic multi-device dashboard with calendar-based energy usage and tariff cost summaries.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Graph Range Selection"
+  "buildName": "Energy Usage & Cost Summary"
 }

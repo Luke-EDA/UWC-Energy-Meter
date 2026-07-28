@@ -131,6 +131,82 @@ a {
   font-size: clamp(1.35rem, 2vw, 1.9rem);
 }
 
+
+.energy-summary-card {
+  margin-top: 22px;
+  padding: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.energy-summary-header,
+.energy-summary-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.energy-summary-header h2 {
+  margin: 0;
+}
+
+.energy-summary-values {
+  margin-top: 22px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.energy-summary-metric {
+  flex: 1;
+  min-width: 0;
+}
+
+.energy-summary-metric span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.energy-summary-metric strong {
+  display: block;
+  font-size: clamp(1.75rem, 3vw, 2.65rem);
+  line-height: 1.1;
+}
+
+.energy-summary-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+}
+
+.energy-summary-period {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 720px) {
+  .energy-summary-header,
+  .energy-summary-values {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .energy-summary-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .energy-summary-header .graph-range-control {
+    justify-content: space-between;
+  }
+}
+
 .history-section {
   margin-top: 36px;
 }

@@ -11,6 +11,7 @@ let pendingDeleteDevice = null;
 let currentSettings = { siteName: '', currency: 'ZAR', pricePerKwh: null };
 let currentTotalPowerRange = '24h';
 let currentTotalPowerRows = [];
+let currentEnergySummaryRange = 'current-month';
 
 const elements = {
   deviceCount: document.getElementById('deviceCount'),
@@ -44,6 +45,11 @@ const elements = {
   historyMessage: document.getElementById('historyMessage'),
   totalPowerHistoryCanvas: document.getElementById('totalPowerHistoryChart'),
   totalPowerRange: document.getElementById('totalPowerRange'),
+  energySummaryRange: document.getElementById('energySummaryRange'),
+  energyUsageValue: document.getElementById('energyUsageValue'),
+  energyCostValue: document.getElementById('energyCostValue'),
+  energySummaryPeriod: document.getElementById('energySummaryPeriod'),
+  energySummaryMessage: document.getElementById('energySummaryMessage'),
   deviceDialog: document.getElementById('deviceDialog'),
   deviceForm: document.getElementById('deviceForm'),
   dialogTitle: document.getElementById('dialogTitle'),
@@ -124,6 +130,7 @@ async function submitOptions(event) {
 
     currentSettings = result;
     renderSiteName();
+    refreshEnergySummary(currentEnergySummaryRange, true);
     elements.optionsMessage.textContent = 'Options saved successfully.';
     elements.optionsMessage.classList.add('success');
     window.setTimeout(() => elements.optionsDialog.close(), 500);
@@ -132,6 +139,63 @@ async function submitOptions(event) {
     elements.optionsMessage.classList.add('error');
   } finally {
     elements.saveOptionsButton.disabled = false;
+  }
+}
+
+
+function formatEnergy(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-- kWh';
+  return `${new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)} kWh`;
+}
+
+function formatCurrency(value, currency) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '--';
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency || 'ZAR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(number);
+  } catch (error) {
+    return `${CURRENCY_SYMBOLS[currency] || currency || ''} ${number.toFixed(2)}`.trim();
+  }
+}
+
+function formatEnergyPeriod(startValue, endValue, isLive) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  const dateOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+  const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+  const startText = `${start.toLocaleDateString([], dateOptions)} ${start.toLocaleTimeString([], timeOptions)}`;
+  if (isLive) return `${startText} – Present`;
+  const inclusiveEnd = new Date(end.getTime() - 1);
+  return `${startText} – ${inclusiveEnd.toLocaleDateString([], dateOptions)} 23:59`;
+}
+
+async function refreshEnergySummary(range = currentEnergySummaryRange, silent = false) {
+  const supported = new Set(['current-month', 'last-month', 'last-6-months', 'last-year']);
+  currentEnergySummaryRange = supported.has(range) ? range : 'current-month';
+  elements.energySummaryRange.value = currentEnergySummaryRange;
+  if (!silent) elements.energySummaryMessage.textContent = 'Calculating energy usage…';
+  elements.energySummaryMessage.classList.remove('error');
+
+  try {
+    const response = await fetch(`/api/energy-summary?range=${encodeURIComponent(currentEnergySummaryRange)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Energy summary API returned ${response.status}`);
+    const summary = await response.json();
+    elements.energyUsageValue.textContent = formatEnergy(summary.energyKwh);
+    elements.energyCostValue.textContent = summary.cost === null
+      ? 'Tariff not configured'
+      : formatCurrency(summary.cost, summary.currency);
+    elements.energySummaryPeriod.textContent = formatEnergyPeriod(summary.start, summary.end, summary.isLive);
+    elements.energySummaryMessage.textContent = '';
+  } catch (error) {
+    console.error('Unable to update energy summary:', error);
+    elements.energySummaryMessage.textContent = 'Unable to calculate energy usage and cost.';
+    elements.energySummaryMessage.classList.add('error');
   }
 }
 
@@ -576,6 +640,7 @@ function initialiseDialogs() {
   });
   elements.confirmDelete.addEventListener('click', confirmDeleteDevice);
   elements.totalPowerRange.addEventListener('change', (event) => refreshTotalPowerHistory(event.target.value));
+  elements.energySummaryRange.addEventListener('change', (event) => refreshEnergySummary(event.target.value));
 
   elements.deviceGrid.addEventListener('click', (event) => {
     const button = event.target.closest('.settings-button');
@@ -598,8 +663,12 @@ function initialise() {
   loadSettings();
   refreshDashboard();
   refreshTotalPowerHistory();
+  refreshEnergySummary();
   window.setInterval(refreshDashboard, REFRESH_INTERVAL_MS);
   window.setInterval(() => refreshTotalPowerHistory(currentTotalPowerRange, true), HISTORY_REFRESH_INTERVAL_MS);
+  window.setInterval(() => {
+    if (currentEnergySummaryRange === 'current-month') refreshEnergySummary('current-month', true);
+  }, HISTORY_REFRESH_INTERVAL_MS);
 }
 
 document.addEventListener('DOMContentLoaded', initialise);

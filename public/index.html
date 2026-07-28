@@ -33,7 +33,7 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.5.7.1</strong>
+          <strong>v1.5.8</strong>
         </div>
       </div>
     </header>
@@ -50,6 +50,36 @@
         <article class="summary-card"><span class="summary-label">Power</span><strong id="totalPower" class="summary-value">-- kW</strong></article>
         <article class="summary-card"><span class="summary-label">Voltage</span><strong id="averageVoltage" class="summary-value">-- V</strong></article>
         <article class="summary-card"><span class="summary-label">Last Update</span><strong id="lastUpdate" class="summary-value summary-time">--:--:--</strong></article>
+      </section>
+
+      <section class="energy-summary-card" aria-labelledby="energySummaryTitle">
+        <div class="energy-summary-header">
+          <div>
+            <p class="section-eyebrow">Tariff summary</p>
+            <h2 id="energySummaryTitle">Energy Usage &amp; Cost</h2>
+          </div>
+          <label class="graph-range-control" for="energySummaryRange">Range
+            <select id="energySummaryRange">
+              <option value="current-month" selected>Current Month</option>
+              <option value="last-month">Last Month</option>
+              <option value="last-6-months">Last 6 Months</option>
+              <option value="last-year">Last Year</option>
+            </select>
+          </label>
+        </div>
+        <div class="energy-summary-values">
+          <div class="energy-summary-metric">
+            <span>Power Usage</span>
+            <strong id="energyUsageValue">-- kWh</strong>
+          </div>
+          <div class="energy-summary-divider" aria-hidden="true"></div>
+          <div class="energy-summary-metric">
+            <span>Energy Cost</span>
+            <strong id="energyCostValue">--</strong>
+          </div>
+        </div>
+        <p id="energySummaryPeriod" class="energy-summary-period">Loading current month…</p>
+        <p id="energySummaryMessage" class="chart-message" role="status" aria-live="polite"></p>
       </section>
 
       <section class="history-section" aria-labelledby="historySectionTitle">
@@ -95,7 +125,7 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.7.1 · Dark Mode Dropdown Fix</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.8 · Energy Usage & Cost Summary</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
