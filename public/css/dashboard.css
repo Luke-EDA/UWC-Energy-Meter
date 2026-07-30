@@ -945,3 +945,14 @@ body,
   background: #ffffff;
   color: #172033;
 }
+
+.export-format-group {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.export-format-group legend { padding: 0 6px; font-weight: 700; }
+.export-format-group label { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.export-checkbox { display: flex; align-items: flex-start; gap: 10px; font-weight: 600; }
+.export-checkbox input { margin-top: 3px; }

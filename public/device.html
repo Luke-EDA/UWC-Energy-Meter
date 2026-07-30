@@ -14,6 +14,7 @@
     <nav class="detail-nav" aria-label="Device navigation">
       <a class="back-button" href="/" aria-label="Back to dashboard">← Back to Dashboard</a>
       <div class="detail-nav-actions">
+        <button id="exportButton" class="secondary-button" type="button">Export Data</button>
         <div class="theme-control theme-control-compact">
           <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
             <span class="theme-toggle-track" aria-hidden="true">
@@ -27,7 +28,7 @@
           </button>
           <span class="theme-toggle-label">Toggle Dark Mode</span>
         </div>
-        <div class="version-chip">v1.5.8.2</div>
+        <div class="version-chip">v1.7.2</div>
       </div>
     </nav>
 
@@ -179,6 +180,17 @@
       <div id="pageMessage" class="page-message" role="alert" hidden></div>
     </main>
 
+
+    <dialog id="exportDialog" class="phase-dialog" aria-labelledby="exportDialogTitle">
+      <div class="dialog-heading"><div><p class="eyebrow">Reporting</p><h2 id="exportDialogTitle">Export Device Data</h2></div><button id="closeExportDialog" class="dialog-close" type="button" aria-label="Close">×</button></div>
+      <div class="export-dialog-fields">
+        <fieldset class="export-format-group"><legend>Format</legend><label><input type="radio" name="deviceExportFormat" value="pdf" checked> PDF report</label><label><input type="radio" name="deviceExportFormat" value="xlsx"> Worksheet (.xlsx)</label></fieldset>
+        <label class="export-range-field" for="deviceExportRange"><span>Range</span><select id="deviceExportRange"><option value="last-week">Last Week - Hourly averages</option><option value="last-month">Last Month - Daily averages</option><option value="last-6-months">Last 6 Months - Weekly averages</option><option value="last-year">Last Year - Weekly averages</option></select></label>
+      </div>
+      <p id="exportMessage" class="dialog-error" hidden></p>
+      <div class="dialog-actions"><button id="cancelExport" class="secondary-button" type="button">Cancel</button><button id="generateExportButton" class="primary-button" type="button">Generate Export</button></div>
+    </dialog>
+
     <dialog id="phaseDialog" class="phase-dialog" aria-labelledby="phaseDialogTitle">
       <div class="dialog-heading">
         <div><p class="eyebrow">Device configuration</p><h2 id="phaseDialogTitle">Edit Phase Lines</h2></div>
@@ -213,7 +225,7 @@
 
     <footer class="detail-footer">
       <strong>UWC Energy Monitor</strong>
-      <span>Version 1.5.8 · Energy Usage & Cost Summary</span>
+      <span>Version 1.7.2 · Per-Phase Export Gap Fix</span>
       <span>Simulator Backend · SQLite Connected</span>
     </footer>
   </div>

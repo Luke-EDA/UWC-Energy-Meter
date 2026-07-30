@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.6.0",
-  "description": "Protocol-agnostic multi-device dashboard with calendar-based energy usage and tariff cost summaries.",
+  "version": "1.7.2",
+  "description": "Protocol-agnostic multi-device dashboard with PDF and worksheet reporting exports.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -11,10 +11,12 @@
     "@fastify/static": "^7.0.4",
     "fastify": "^4.28.1",
     "sqlite3": "^5.1.7",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "exceljs": "^4.4.0",
+    "pdfkit": "^0.15.0"
   },
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Energy Usage & Cost Summary"
+  "buildName": "Per-Phase Export Gap Fix"
 }

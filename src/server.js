@@ -15,6 +15,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { WebSocketServer } = require('ws');
 
 const deviceManager = require('./services/deviceManager');
+const exportService = require('./exportService');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -690,6 +691,45 @@ app.get('/api/history', async (request) => history(request.query.deviceId || 'uw
 app.get('/api/history/total-power', async (request) => totalPowerHistory(request.query.range));
 app.get('/api/energy-summary', async (request) => getEnergyCostSummary(request.query.range, request.query.deviceId || null));
 app.get('/api/summary', async (request) => energySummary(request.query.deviceId || 'uwc-meter-001'));
+
+
+async function sendGeneratedFile(reply, result, contentType) {
+  reply.header('Content-Type', contentType);
+  reply.header('Content-Disposition', `attachment; filename="${result.filename}"`);
+  reply.header('Content-Length', String(result.buffer.length));
+  return reply.send(result.buffer);
+}
+
+app.get('/api/exports/dashboard/:format', async (request, reply) => {
+  try {
+    const format = String(request.params.format || '').toLowerCase();
+    const includeDevices = String(request.query.includeDevices || 'false').toLowerCase() === 'true';
+    const devices = deviceManager.getDevices();
+    const args = { db, devices, rangeValue: request.query.range, includeDevices };
+    if (format === 'pdf') return sendGeneratedFile(reply, await exportService.createDashboardPdf(args), 'application/pdf');
+    if (format === 'xlsx') return sendGeneratedFile(reply, await exportService.createDashboardWorkbook(args), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return reply.code(400).send({ error: 'Unsupported export format.' });
+  } catch (error) {
+    app.log.error({ err: error }, 'Dashboard export failed');
+    return reply.code(500).send({ error: 'Unable to generate dashboard export.' });
+  }
+});
+
+app.get('/api/devices/:id/exports/:format', async (request, reply) => {
+  try {
+    const format = String(request.params.format || '').toLowerCase();
+    const device = deviceManager.getDevice(request.params.id);
+    if (!device) return reply.code(404).send({ error: 'Device not found.' });
+    const args = { db, device, rangeValue: request.query.range };
+    if (format === 'pdf') return sendGeneratedFile(reply, await exportService.createDevicePdf(args), 'application/pdf');
+    if (format === 'xlsx') return sendGeneratedFile(reply, await exportService.createDeviceWorkbook(args), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return reply.code(400).send({ error: 'Unsupported export format.' });
+  } catch (error) {
+    app.log.error({ err: error }, 'Device export failed');
+    return reply.code(500).send({ error: 'Unable to generate device export.' });
+  }
+});
+
 app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
 
 const start = async () => {

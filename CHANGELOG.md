@@ -1,20 +1,37 @@
-## v1.6.0
+# Changelog
 
-Major stable release merging the complete v1.5.x dashboard refinement series into main.
+## v1.7.2 - Independent Phase Export Pipeline
 
-### Highlights
+- Rebuilt device export history preparation around one independent data series per phase.
+- A disabled phase now creates gaps only in that phase's PDF line and worksheet rows.
+- Enabled phases retain their valid hourly, daily, or weekly averages during another phase's disabled interval.
+- Removed shared bucket-validity behaviour from device PDF and worksheet generation.
+- Preserved blank values for genuinely missing samples and full-phase disabled buckets without substituting zero or carrying values forward.
+- Kept phase-disable availability notes, report axes, units, legends, and Light Mode PDF formatting.
 
-- Collapsible dashboard device section
-- Dashboard Total Power History graph
-- Standard three-phase colours
-- Site name, currency and tariff settings
-- Per-phase labels and metering enable/disable controls
-- Historical graph range selection
-- Dashboard energy usage and cost summary
-- Device-specific energy usage and cost summary
-- Dark Mode refinements
-- SQLite stability fixes
-- UI consistency and layout improvements
+## v1.7.1 - PDF Report Improvements
+
+- Added labelled Y-axis scales with engineering units to exported PDF graphs.
+- Added range-aware date and time labels to graph X-axes.
+- Added horizontal and vertical grid lines for easier value estimation.
+- Added clear axis titles, graph legends, and figure numbering.
+- Added the reporting period and averaging resolution beneath each graph.
+- Added page-number footers with site name and report-generation timestamp.
+- Preserved A4 portrait formatting and the always-Light-Mode PDF design.
+- No changes were made to worksheet exports, export ranges, or averaging intervals.
+- Corrected exported phase histories so fully disabled reporting buckets remain blank and produce visible graph gaps instead of lines averaged across the disabled interval.
+- Added disabled-phase availability periods beneath affected PDF graphs and to device worksheets.
+- Corrected phase summary status handling so an enabled phase without a latest sample is shown as No data rather than Disabled.
+
+## v1.7.0 - Data Export
+
+- Added PDF and Excel-compatible worksheet exports to the dashboard and Device Details pages.
+- Added Last Week, Last Month, Last 6 Months and Last Year export ranges.
+- Export aggregation uses hourly, daily or weekly averages according to the selected reporting range.
+- PDF reports use A4 portrait Light Mode formatting regardless of the active application theme.
+- Dashboard exports can include individual devices as additional PDF pages or workbook sheets.
+- Worksheet layouts place reporting timestamps in columns and phase measurement data in rows.
+- Reports identify the selected period and data resolution.
 
 ## [1.5.8.2] - Device Energy Usage & Cost Summary
 

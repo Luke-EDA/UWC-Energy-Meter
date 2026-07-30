@@ -2,25 +2,9 @@
 
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.6.0: Finalise UI improvements
+## Version 1.7.2: PDF Report Improvements
 
-Version 1.6.0 marks the completion of the UI updates and changes.
-
-## Version 1.5.8.2: Device Energy Usage & Cost Summary
-
-Version 1.5.8.2 extends the Energy Usage & Cost Summary to the Device Details page, allowing the usage and estimated cost of an individual device to be checked using the same tariff saved in Site Options. The site-wide dashboard summary remains unchanged. The selectable periods are Current Month, Last Month, Last 6 Months and Last Year, aligned to local calendar-month boundaries. Last 6 Months and Last Year cover the previous 6 or 12 complete calendar months ending on the final day of the previous month. Current Month refreshes continuously; completed periods remain static until selected again.
-
-The physical UWC units and their firmware are still under development, so this release deliberately does not assume Modbus, MQTT, HTTP, WebSockets, raw TCP, or any other device protocol.
-
-The application now uses a provider architecture:
-
-- `BaseProvider` defines the common adapter interface.
-- `DummyProvider` supplies simulated readings through that interface.
-- `ProviderFactory` selects the adapter configured for each device.
-- `UnconfiguredNetworkProvider` represents future Wi-Fi hardware without guessing its protocol.
-- Device status is standardised as Online, Offline, Disabled, Initialising, or Not Configured.
-
-A future adapter only needs to translate its protocol into the application's existing standard measurement object. The dashboard, history database, and device-details page remain independent of the communications method.
+Version 1.7.2 improves exported PDF reports by adding labelled axes, engineering units, readable tick values, range-aware date labels, grid lines, legends, figure numbering, reporting metadata, and page-number footers. PDF reports remain A4 portrait and always use the Light Mode report design. Worksheet exports and export aggregation intervals are unchanged.
 
 ## Run locally
 
@@ -94,3 +78,14 @@ Every historical graph includes its own temporary range selector with **24 hours
 Each configured meter has independent settings for L1, L2 and L3. On the Device Details page, select **Edit Phase Lines** to add an optional label or enable/disable metering for a phase. Labels are displayed as, for example, `L1 - Kitchen` throughout the phase cards, energy summary headings and graph legend.
 
 Disabling a phase requires confirmation. Existing history is preserved and remains visible, while no new measurement records are stored for that phase. The disabled interval is represented as a gap in the graph, keeping a genuine zero-power reading distinct from metering being switched off. Re-enabling a phase resumes collection without requiring confirmation.
+
+
+## Data exports (v1.7.2)
+
+Dashboard and Device Details pages provide PDF and `.xlsx` report generation. Export ranges use report-friendly aggregation: Last Week uses hourly averages, Last Month uses daily averages, and Last 6 Months/Last Year use weekly averages. Dashboard exports may include one page or worksheet per configured device. PDF output is always rendered using the Light Mode report design in A4 portrait format. Exported device histories preserve fully disabled phase intervals as blank buckets, producing clear breaks in PDF trend lines and blank worksheet cells. Affected reports also list the recorded phase-disable periods so intentional metering changes can be distinguished from missing communications data.
+
+After updating from an earlier version, run `npm install` to install the new `pdfkit` and `exceljs` dependencies.
+
+### v1.7.2 export correction
+
+Device export histories are now assembled as independent L1, L2 and L3 series. A disabled or unavailable phase produces a gap only for that phase; other active phases continue to display and export their valid averages for the same reporting intervals.
