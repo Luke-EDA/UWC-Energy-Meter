@@ -725,10 +725,6 @@ body,
   box-shadow: 0 8px 22px rgba(24, 44, 72, 0.08);
 }
 
-.device-energy-summary-card {
-  margin-top: 22px;
-}
-
 [data-theme="dark"] .energy-summary-card {
   box-shadow: var(--shadow);
 }
@@ -812,3 +808,11 @@ body,
     justify-content: space-between;
   }
 }
+
+.device-energy-summary-card { margin-top: 22px; }
+.export-dialog-fields { display: grid; gap: 18px; margin: 18px 0; }
+.export-format-group { margin: 0; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.export-format-group legend { padding: 0 6px; font-weight: 700; }
+.export-format-group label { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.export-range-field { display: grid; gap: 7px; font-weight: 700; }
+.export-range-field select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }

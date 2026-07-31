@@ -428,6 +428,7 @@ function bindPhaseDialog() {
 }
 
 async function initialise() {
+  bindExportDialog();
   bindPhaseDialog();
   bindHistoryRange();
   bindEnergySummaryRange();
@@ -473,3 +474,53 @@ initialise().catch((error) => {
 });
 
 window.addEventListener('uwc-theme-change', applyChartTheme);
+
+function exportFilenameFromDisposition(response, fallback) {
+  const disposition = response.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match ? match[1] : fallback;
+}
+
+async function generateDeviceExport() {
+  const format = document.querySelector('input[name="deviceExportFormat"]:checked')?.value || 'pdf';
+  const range = byId('deviceExportRange').value;
+  const message = byId('exportMessage');
+  const button = byId('generateExportButton');
+  message.hidden = false;
+  message.textContent = 'Generating export…';
+  button.disabled = true;
+  try {
+    const response = await fetch(`/api/devices/${selectedDevice.id}/exports/${format}?range=${encodeURIComponent(range)}`);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || `Export failed with HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = exportFilenameFromDisposition(response, `${selectedDevice.name}-Export.${format}`);
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    byId('exportDialog').close();
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function bindExportDialog() {
+  const dialog = byId('exportDialog');
+  byId('exportButton').addEventListener('click', () => {
+    byId('deviceExportRange').value = 'last-week';
+    byId('exportMessage').hidden = true;
+    dialog.showModal();
+  });
+  byId('closeExportDialog').addEventListener('click', () => dialog.close());
+  byId('cancelExport').addEventListener('click', () => dialog.close());
+  byId('generateExportButton').addEventListener('click', generateDeviceExport);
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+}

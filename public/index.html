@@ -17,6 +17,7 @@
         <h1>Energy Monitor</h1>
       </div>
       <div class="topbar-controls">
+        <button id="exportButton" class="header-button" type="button">Export Data</button>
         <button id="optionsButton" class="header-button" type="button">Options</button>
         <div class="theme-control">
           <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
@@ -33,7 +34,7 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.5.8</strong>
+          <strong>v1.8.0</strong>
         </div>
       </div>
     </header>
@@ -125,11 +126,23 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.5.8 · Energy Usage & Cost Summary</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.8.0 · Deployment & Network Diagnostics</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
 
+  <dialog id="exportDialog" class="modal">
+    <form id="exportForm" class="modal-card">
+      <div class="modal-heading"><div><p class="section-eyebrow">Reporting</p><h2>Export Data</h2></div><button id="closeExportDialog" class="icon-button" type="button" aria-label="Close export dialog">×</button></div>
+      <div class="form-grid">
+        <fieldset class="export-format-group form-field-wide"><legend>Format</legend><label><input type="radio" name="exportFormat" value="pdf" checked> PDF report</label><label><input type="radio" name="exportFormat" value="xlsx"> Worksheet (.xlsx)</label></fieldset>
+        <label class="form-field form-field-wide"><span>Range</span><select id="exportRange"><option value="last-week">Last Week - Hourly averages</option><option value="last-month">Last Month - Daily averages</option><option value="last-6-months">Last 6 Months - Weekly averages</option><option value="last-year">Last Year - Weekly averages</option></select></label>
+        <label class="export-checkbox form-field-wide"><input id="includeDevicesExport" type="checkbox"><span>Include individual devices as extra PDF pages or workbook sheets</span></label>
+      </div>
+      <p id="exportMessage" class="form-message" role="status" aria-live="polite"></p>
+      <div class="modal-actions"><button id="cancelExport" class="secondary-button" type="button">Cancel</button><button id="generateExportButton" class="primary-button" type="submit">Generate Export</button></div>
+    </form>
+  </dialog>
 
   <dialog id="optionsDialog" class="modal">
     <form id="optionsForm" class="modal-card">

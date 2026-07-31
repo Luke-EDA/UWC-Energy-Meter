@@ -657,6 +657,7 @@ function initialiseDialogs() {
 }
 
 function initialise() {
+  initialiseExportDialog();
   initialiseHistorySection();
   initialiseDeviceSection();
   initialiseDialogs();
@@ -673,3 +674,57 @@ function initialise() {
 
 document.addEventListener('DOMContentLoaded', initialise);
 window.addEventListener('uwc-theme-change', applyTotalPowerChartTheme);
+
+function exportFilenameFromDisposition(response, fallback) {
+  const disposition = response.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match ? match[1] : fallback;
+}
+
+async function generateDashboardExport(event) {
+  event.preventDefault();
+  const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'pdf';
+  const range = document.getElementById('exportRange').value;
+  const includeDevices = document.getElementById('includeDevicesExport').checked;
+  const message = document.getElementById('exportMessage');
+  const button = document.getElementById('generateExportButton');
+  message.textContent = 'Generating export…';
+  button.disabled = true;
+  try {
+    const query = new URLSearchParams({ range, includeDevices: String(includeDevices) });
+    const response = await fetch(`/api/exports/dashboard/${format}?${query}`);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || `Export failed with HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = exportFilenameFromDisposition(response, `UWC-Energy-Monitor-Export.${format}`);
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    document.getElementById('exportDialog').close();
+    message.textContent = '';
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function initialiseExportDialog() {
+  const dialog = document.getElementById('exportDialog');
+  document.getElementById('exportButton').addEventListener('click', () => {
+    document.getElementById('exportRange').value = 'last-week';
+    document.getElementById('includeDevicesExport').checked = false;
+    document.getElementById('exportMessage').textContent = '';
+    dialog.showModal();
+  });
+  document.getElementById('closeExportDialog').addEventListener('click', () => dialog.close());
+  document.getElementById('cancelExport').addEventListener('click', () => dialog.close());
+  document.getElementById('exportForm').addEventListener('submit', generateDashboardExport);
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+}
