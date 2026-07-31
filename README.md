@@ -1,8 +1,19 @@
 # UWC Energy Monitor
 
+## Version 1.8.0: Deployment & Network Diagnostics
+
+Version 1.8.0 formalises local-network deployment for the final application handover. The server continues to listen on all interfaces by default, now validates configurable `HOST` and `PORT` values, lists usable LAN URLs at startup, and provides `/health` and `/api/health` diagnostic endpoints. A dedicated [NETWORK_SETUP.md](NETWORK_SETUP.md) guide covers Windows Firewall, ESET, network profiles, connectivity testing, static-address recommendations, and the security boundary between trusted LAN use and internet exposure.
+
+### Quick LAN check
+
+1. Start the service with `npm start`.
+2. Use the Network Access URL printed in the startup log.
+3. From another device, open the URL or its `/health` endpoint.
+4. If it times out, check Windows Firewall and endpoint-security troubleshooting logs for a blocked `node.exe`.
+
 A web-based dashboard and ingestion API for a three-phase energy monitoring system.
 
-## Version 1.7.2: PDF Report Improvements
+## Version 1.7.2: PDF Report Improvements (Previous Release)
 
 Version 1.7.2 improves exported PDF reports by adding labelled axes, engineering units, readable tick values, range-aware date labels, grid lines, legends, figure numbering, reporting metadata, and page-number footers. PDF reports remain A4 portrait and always use the Light Mode report design. Worksheet exports and export aggregation intervals are unchanged.
 

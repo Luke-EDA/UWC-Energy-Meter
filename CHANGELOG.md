@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.8.0 - Deployment & Network Diagnostics
+
+- Verified local-network access from a separate phone client while the server listens on `0.0.0.0`.
+- Added validated `HOST` and `PORT` environment configuration with defaults of `0.0.0.0` and `3000`.
+- Added a startup banner that lists localhost and detected LAN access URLs.
+- Added `/health` and retained `/api/health`, returning status, version, uptime, bind settings, network addresses and timestamp.
+- Added `NETWORK_SETUP.md` with Windows Firewall, ESET, network-profile, connectivity-test, static-IP and security guidance.
+- Documented that endpoint-security products can silently block `node.exe` even when the application and Windows Firewall are configured correctly.
+- Clarified that v1.8.0 enables trusted-LAN deployment only and does not make the service suitable for direct internet exposure.
+
 ## v1.7.2 - Independent Phase Export Pipeline
 
 - Rebuilt device export history preparation around one independent data series per phase.

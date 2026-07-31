@@ -8,6 +8,8 @@
  */
 
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 const crypto = require('crypto');
 const Fastify = require('fastify');
 const fastifyStatic = require('@fastify/static');
@@ -17,8 +19,49 @@ const { WebSocketServer } = require('ws');
 const deviceManager = require('./services/deviceManager');
 const exportService = require('./exportService');
 
-const PORT = Number(process.env.PORT || 3000);
-const HOST = process.env.HOST || '0.0.0.0';
+const DEFAULT_PORT = 3000;
+const HOST = String(process.env.HOST || '0.0.0.0').trim();
+const PORT = Number(process.env.PORT || DEFAULT_PORT);
+const VERSION = fs.readFileSync(path.join(__dirname, '..', 'VERSION'), 'utf8').trim();
+
+if (!HOST) {
+  throw new Error('HOST must not be empty.');
+}
+
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+  throw new Error(`Invalid PORT value: ${process.env.PORT}. Use an integer from 1 to 65535.`);
+}
+
+function getLanAddresses() {
+  const addresses = [];
+  const interfaces = os.networkInterfaces();
+
+  for (const [interfaceName, entries] of Object.entries(interfaces)) {
+    for (const entry of entries || []) {
+      if (entry.family !== 'IPv4' || entry.internal) continue;
+      addresses.push({ interfaceName, address: entry.address });
+    }
+  }
+
+  return addresses;
+}
+
+function getAccessUrls() {
+  const urls = [{ label: 'Local', url: `http://localhost:${PORT}` }];
+
+  if (HOST === '0.0.0.0' || HOST === '::') {
+    for (const item of getLanAddresses()) {
+      urls.push({
+        label: `Network (${item.interfaceName})`,
+        url: `http://${item.address}:${PORT}`
+      });
+    }
+  } else if (HOST !== '127.0.0.1' && HOST !== 'localhost') {
+    urls.push({ label: 'Configured host', url: `http://${HOST}:${PORT}` });
+  }
+
+  return urls;
+}
 const DB_FILE = process.env.DB_FILE || path.join(__dirname, '..', 'energy_meter.sqlite');
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || 'change-this-token-before-deployment';
 const ENABLE_SIMULATOR = process.env.ENABLE_SIMULATOR !== 'false';
@@ -730,10 +773,37 @@ app.get('/api/devices/:id/exports/:format', async (request, reply) => {
   }
 });
 
-app.get('/api/health', async () => ({ ok: true, service: 'UWC Energy Monitor', requestId: crypto.randomUUID() }));
+function healthPayload() {
+  return {
+    status: 'ok',
+    service: 'UWC Energy Monitor',
+    version: VERSION,
+    uptimeSeconds: Math.floor(process.uptime()),
+    host: HOST,
+    port: PORT,
+    networkAddresses: getLanAddresses(),
+    timestamp: new Date().toISOString(),
+    requestId: crypto.randomUUID()
+  };
+}
+
+app.get('/health', async () => healthPayload());
+app.get('/api/health', async () => healthPayload());
 
 const start = async () => {
   await app.listen({ port: PORT, host: HOST });
+
+  const urls = getAccessUrls();
+  const separator = '='.repeat(48);
+  app.log.info(separator);
+  app.log.info(`UWC Energy Monitor v${VERSION}`);
+  app.log.info(`Listening on ${HOST}:${PORT}`);
+  for (const item of urls) {
+    app.log.info(`${item.label}: ${item.url}`);
+  }
+  app.log.info(`Health check: http://localhost:${PORT}/health`);
+  app.log.info('If another device cannot connect, check Windows Firewall and endpoint-security rules for node.exe.');
+  app.log.info(separator);
 };
 
 start().catch(err => {

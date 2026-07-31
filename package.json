@@ -1,7 +1,7 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.7.2",
-  "description": "Protocol-agnostic multi-device dashboard with PDF and worksheet reporting exports.",
+  "version": "1.8.0",
+  "description": "Protocol-agnostic multi-device energy dashboard with reporting exports and LAN deployment diagnostics.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -18,5 +18,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Per-Phase Export Gap Fix"
+  "buildName": "Deployment & Network Diagnostics"
 }
