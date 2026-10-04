@@ -421,8 +421,6 @@ async function addDevicePdfPage(doc, db, device, range, settings, addPage = true
   addMetricRow(doc, [
     { label: 'Status', value: device.enabled === false ? 'Disabled' : (device.status || 'Unknown') },
     { label: 'Total Power', value: latest ? `${Number(latest.total_power_kw).toFixed(2)} kW` : '--' },
-    { label: 'Frequency', value: latest?.frequency_hz == null ? '--' : `${Number(latest.frequency_hz).toFixed(2)} Hz` },
-    { label: 'Power Factor', value: latest?.power_factor == null ? '--' : Number(latest.power_factor).toFixed(3) }
   ]);
   addMetricRow(doc, [
     { label: 'Energy Usage', value: `${energyKwh.toFixed(2)} kWh` },

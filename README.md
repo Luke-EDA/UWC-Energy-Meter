@@ -106,3 +106,9 @@ After updating from an earlier version, run `npm install` to install the new `pd
 ### v1.7.2 export correction
 
 Device export histories are now assembled as independent L1, L2 and L3 series. A disabled or unavailable phase produces a gap only for that phase; other active phases continue to display and export their valid averages for the same reporting intervals.
+
+### Uncalibrated EnergyGuard measurement history
+Valid EnergyGuard UDP voltage/current readings are stored in the separate `energyguard_measurements` SQLite table even when `calibrated` is false or no power factor is supplied. Retrieve recent samples using `GET /api/energyguard/history?deviceId=DEVICE_NAME&limit=100`. Unknown power and power factor are stored as SQL NULL, not zero or an assumed value. The existing kWh, cost, power graphs and PDF/XLSX energy exports still use calibrated power history only. Invalid samples are not stored.
+
+### v1.9.2 power convention
+Per-phase displayed Power (kW) = measured RMS voltage × measured RMS current / 1000. Total Power is the sum of enabled phases. The label kW is retained by project convention, but the calculation yields apparent power (technically kVA). Energy and tariff outputs derived from this value are estimates, not measured real energy or billing-grade readings. Frequency and power factor are outside project scope. Valid uncalibrated measurements are retained in history. Existing SQLite frequency/PF columns are preserved for backward compatibility.

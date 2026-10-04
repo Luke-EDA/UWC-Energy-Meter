@@ -147,9 +147,7 @@ function updateLive(data) {
   if (data.phaseConfig) applyPhaseConfig(data.phaseConfig);
   const lastUpdate = formatTime(data.ts);
   byId('neutralStatus').textContent = data.neutralPresent ? 'Present' : 'Missing';
-  byId('totalKw').textContent = `${fmt(data.totalPowerKw)} kW`;
-  byId('frequency').textContent = `${fmt(data.frequencyHz ?? 50, 2)} Hz`;
-  byId('powerFactor').textContent = fmt(data.powerFactor ?? 1, 2);
+  byId('totalKw').textContent = data.totalPowerKw == null ? 'N/A' : `${fmt(data.totalPowerKw)} kW`;
   byId('lastUpdate').textContent = lastUpdate;
   byId('headerLastUpdate').textContent = `Last update ${lastUpdate}`;
 
@@ -157,7 +155,7 @@ function updateLive(data) {
     if (!phaseConfig[phase].enabled || !data[phase]) return;
     byId(`${phase}v`).textContent = `${fmt(data[phase].voltage, 1)} V`;
     byId(`${phase}c`).textContent = `${fmt(data[phase].current, 2)} A`;
-    byId(`${phase}p`).textContent = `${fmt(data[phase].powerKw, 3)} kW`;
+    byId(`${phase}p`).textContent = data[phase].powerKw == null ? 'N/A' : `${fmt(data[phase].powerKw, 3)} kW`;
   });
 }
 
@@ -346,8 +344,6 @@ function connectWebSocket() {
       deviceId: reading.deviceId,
       ts: reading.ts,
       neutralPresent: Boolean(reading.neutralPresent),
-      frequencyHz: reading.frequencyHz,
-      powerFactor: reading.powerFactor,
       totalPowerKw: reading.totalPowerKw,
       l1: reading.l1PowerKw == null ? null : { voltage: reading.l1Voltage, current: reading.l1Current, powerKw: reading.l1PowerKw },
       l2: reading.l2PowerKw == null ? null : { voltage: reading.l2Voltage, current: reading.l2Current, powerKw: reading.l2PowerKw },
@@ -459,7 +455,9 @@ async function initialise() {
     return;
   }
   if (!latest) {
-    setUnavailableState({ status: 'offline', statusMessage: `No readings are available for ${selectedDeviceId}` });
+    setConnection(true);
+    byId('headerLastUpdate').textContent = 'Waiting for live measurements';
+    connectWebSocket();
     return;
   }
 

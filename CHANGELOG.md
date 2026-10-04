@@ -1,3 +1,24 @@
+## v1.9.2 — Simplified Power Measurement
+- Derive per-phase displayed power as voltage × current / 1000; total power is the sum of enabled phases. Display unit remains kW by project convention, although this is apparent power (kVA).
+- Save valid calibrated and uncalibrated EnergyGuard samples in the standard history pipeline, and retain the raw V/A history.
+- Remove frequency and power-factor cards from device details and PDF summaries.
+- Stop generating simulated frequency/PF; retain legacy database columns for compatibility.
+- Energy (kWh) and tariff amounts are estimates based on apparent power, not measured real energy.
+
+## v1.9.1 — Uncalibrated measurement history update
+- Save valid EnergyGuard voltage/current UDP readings independently of calibration or power factor.
+- Preserve unknown power as NULL; keep energy and billing history calibrated-only.
+- Expose recent raw measurements through `/api/energyguard/history`.
+- Correct device-details online state and show N/A for unavailable power, PF and frequency.
+
+## v1.9.1 — EnergyGuard Live UDP Measurements
+
+- Registered EnergyGuard meters now use live UDP voltage/current readings rather than the unconfigured network adapter. Existing v1.9.0 registrations are migrated in memory automatically.
+- Simulator history is restricted to dummy devices.
+- Offline and invalid broadcast states are exposed by the device manager.
+- Uncalibrated readings are visible live but excluded from historical energy and tariff calculations. Calibrated measurements require a firmware-supplied power factor before power/history can be calculated.
+- No assumed frequency or power factor is presented as a measured value.
+
 # Changelog
 
 ## v1.9.0 - EnergyGuard Auto Discovery

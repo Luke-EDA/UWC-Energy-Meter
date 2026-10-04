@@ -27,7 +27,8 @@ class DeviceManager {
   }
 
   normaliseStoredDevice(device) {
-    const provider = String(device.provider || device.type || 'dummy').toLowerCase();
+    let provider = String(device.provider || device.type || 'dummy').toLowerCase();
+    if (provider === 'network' && device.providerOptions?.energyguardDeviceId) provider = 'energyguard';
     const connection = device.connection && typeof device.connection === 'object'
       ? { ...device.connection }
       : { host: device.ipAddress || '' };
@@ -100,9 +101,13 @@ class DeviceManager {
       device.latestData = data;
       device.lastSuccess = data.timestamp || new Date().toISOString();
       device.status = 'online';
-      device.statusMessage = 'Receiving data';
+      device.statusMessage = data.source === 'energyguard-udp'
+        ? (data.calibrated ? 'Receiving live UDP measurements' : 'Live UDP measurements (uncalibrated)')
+        : 'Receiving data';
     } catch (error) {
-      if (error.code === 'ADAPTER_NOT_CONFIGURED') {
+      if (error.code === 'METER_INVALID') {
+        device.status = 'invalid';
+      } else if (error.code === 'ADAPTER_NOT_CONFIGURED') {
         device.status = 'adapter_not_configured';
       } else {
         device.status = device.lastSuccess ? 'offline' : 'error';

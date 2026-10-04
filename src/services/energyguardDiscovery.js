@@ -3,6 +3,7 @@
 const dgram = require('dgram');
 const net = require('net');
 const deviceManager = require('./deviceManager');
+const energyguard = require('./energyguardProvider');
 
 const PORT = Number(process.env.ENERGYGUARD_DISCOVERY_PORT || 4210);
 const TTL_MS = 30000;
@@ -28,6 +29,7 @@ function receive(buffer, remote) {
   if (!message || message.type !== 'energyguard.announce.v1' ||
       message.schema !== 'energyguard.measurement.v1' || !validId(message.device_id)) return;
   const deviceId = message.device_id.toUpperCase();
+  energyguard.accept(message, remote.address);
   const name = typeof message.name === 'string' && message.name.trim().length <= 80 && message.name.trim().length >= 2
     ? message.name.trim() : `EnergyGuard-${deviceId.slice(-4)}`;
   const port = Number(message.port);

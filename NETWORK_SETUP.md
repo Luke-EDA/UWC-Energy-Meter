@@ -149,3 +149,10 @@ The server rejects an empty host or a port outside `1`–`65535`.
 ## EnergyGuard automatic discovery (v1.9.0)
 
 Allow inbound **UDP 4210** to the Node.js server in Windows Firewall and ESET. The server must be on a network that receives the meters' UDP broadcasts. Stop any PowerShell UDP listener using port 4210 before starting the app. Open **Add Device** and select a meter from the discovered list. Registered meters will not be offered again. The meter's IP may change through DHCP; subsequent announcements refresh its stored address. Discovery does not yet enable live measurement ingestion.
+
+## v1.9.1 live measurements
+
+EnergyGuard broadcasts on UDP 4210 update registered meters live. The current firmware example advertises `calibrated: false` and does not supply a measured power factor. The app displays its voltage/current values but intentionally does not write these uncalibrated samples to the billable energy history. When firmware reports `calibrated: true`, `valid: true` and `power_factor` between 0 and 1, calibrated measurements can be stored. UDP broadcasts must reach the server; allow UDP 4210 through local firewall/endpoint security.
+
+### Meter measurement convention (v1.9.2)
+Live UDP voltage and current are accepted when valid, regardless of calibration status. Power displayed as kW is calculated as V × A / 1000 (technically apparent power in kVA). Historical energy and costs are estimates.
