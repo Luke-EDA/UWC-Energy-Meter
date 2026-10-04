@@ -17,6 +17,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { WebSocketServer } = require('ws');
 
 const deviceManager = require('./services/deviceManager');
+const discovery = require('./services/energyguardDiscovery');
 const exportService = require('./exportService');
 
 const DEFAULT_PORT = 3000;
@@ -663,6 +664,24 @@ app.get('/api/devices', async () => {
 
 app.get('/api/providers', async () => deviceManager.getProviders());
 
+app.get('/api/discovered-devices', async () => discovery.available());
+
+app.post('/api/discovered-devices/:deviceId/register', async (request, reply) => {
+  try {
+    const found = discovery.get(request.params.deviceId);
+    if (!found) return reply.code(404).send({ error: 'Meter is no longer available or is already registered.' });
+    const device = deviceManager.addDevice({
+      name: String(request.body?.name || found.name).trim(),
+      provider: 'network',
+      connection: { host: found.ip },
+      providerOptions: { energyguardDeviceId: found.deviceId, energyguardPort: found.port },
+      pollInterval: 1000,
+      enabled: true
+    });
+    return reply.code(201).send(device);
+  } catch (error) { return reply.code(400).send({ error: error.message }); }
+});
+
 app.get('/api/settings', async () => getSettings());
 
 app.put('/api/settings', async (request, reply) => {
@@ -792,6 +811,7 @@ app.get('/api/health', async () => healthPayload());
 
 const start = async () => {
   await app.listen({ port: PORT, host: HOST });
+  discovery.start(app.log);
 
   const urls = getAccessUrls();
   const separator = '='.repeat(48);

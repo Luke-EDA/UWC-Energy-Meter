@@ -323,9 +323,41 @@ async function refreshDashboard() {
   }
 }
 
+let discoveredMeters = [];
+let selectedDiscoveryId = '';
+async function refreshDiscoveredMeters() {
+  const selector = document.getElementById('discoveredMeterSelect');
+  const status = document.getElementById('discoveryStatus');
+  try {
+    const response = await fetch('/api/discovered-devices');
+    if (!response.ok) throw new Error('Discovery service unavailable');
+    discoveredMeters = await response.json();
+    selector.replaceChildren();
+    selector.add(new Option(discoveredMeters.length ? 'Select a detected meter…' : 'No unregistered meters detected', ''));
+    for (const meter of discoveredMeters) {
+      selector.add(new Option(`${meter.name} — ${meter.ip} (${meter.deviceId})`, meter.deviceId));
+    }
+    if (discoveredMeters.some(meter => meter.deviceId === selectedDiscoveryId)) selector.value = selectedDiscoveryId;
+    else selectedDiscoveryId = '';
+    status.textContent = discoveredMeters.length
+      ? `${discoveredMeters.length} available meter(s).` : 'No available meters. Check that the meter is broadcasting on UDP 4210.';
+  } catch (error) { status.textContent = error.message; }
+}
+function selectDiscoveredMeter(id) {
+  selectedDiscoveryId = id;
+  const meter = discoveredMeters.find(item => item.deviceId === id);
+  if (!meter) return;
+  elements.deviceForm.elements.name.value = meter.name;
+  elements.deviceForm.elements.provider.value = 'network';
+  elements.deviceForm.elements.host.value = meter.ip;
+}
+
 function setDialogMode(device = null) {
   editingDeviceId = device ? Number(device.id) : null;
   elements.deviceForm.reset();
+  selectedDiscoveryId = '';
+  document.getElementById('discoveryPanel').hidden = !!device;
+  document.getElementById('discoveredMeterSelect').value = '';
   elements.deviceMessage.textContent = '';
   elements.deviceMessage.classList.remove('error', 'success');
 
@@ -356,6 +388,7 @@ function openDeviceDialog(device = null) {
   setDialogMode(device);
   if (typeof elements.deviceDialog.showModal === 'function') {
     elements.deviceDialog.showModal();
+    if (!device) refreshDiscoveredMeters();
     document.getElementById('deviceNameInput').focus();
   }
 }
@@ -380,10 +413,14 @@ async function submitDevice(event) {
   elements.saveDeviceButton.disabled = true;
 
   try {
-    const response = await fetch(isEditing ? `/api/devices/${editingDeviceId}` : '/api/devices', {
+    const discoveryRegistration = !isEditing && !!selectedDiscoveryId;
+    const endpoint = discoveryRegistration
+      ? `/api/discovered-devices/${encodeURIComponent(selectedDiscoveryId)}/register`
+      : (isEditing ? `/api/devices/${editingDeviceId}` : '/api/devices');
+    const response = await fetch(endpoint, {
       method: isEditing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formPayload())
+      body: JSON.stringify(discoveryRegistration ? { name: elements.deviceForm.elements.name.value } : formPayload())
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `Unable to save device (${response.status})`);
@@ -630,6 +667,18 @@ function initialiseDialogs() {
   elements.currencyInput.addEventListener('change', updateCurrencySymbol);
   elements.optionsForm.addEventListener('submit', submitOptions);
   elements.addDeviceButton.addEventListener('click', () => openDeviceDialog());
+  document.getElementById('refreshDiscoveredMeters').addEventListener('click', refreshDiscoveredMeters);
+  document.getElementById('discoveredMeterSelect').addEventListener('change', event => selectDiscoveredMeter(event.target.value));
+  for (const field of [elements.deviceForm.elements.provider, elements.deviceForm.elements.host]) {
+    field.addEventListener('change', () => {
+      if (!selectedDiscoveryId) return;
+      const meter = discoveredMeters.find(item => item.deviceId === selectedDiscoveryId);
+      if (meter && (elements.deviceForm.elements.provider.value !== 'network' || elements.deviceForm.elements.host.value !== meter.ip)) {
+        selectedDiscoveryId = '';
+        document.getElementById('discoveredMeterSelect').value = '';
+      }
+    });
+  }
   elements.closeDeviceDialog.addEventListener('click', () => elements.deviceDialog.close());
   elements.cancelDevice.addEventListener('click', () => elements.deviceDialog.close());
   elements.deviceForm.addEventListener('submit', submitDevice);

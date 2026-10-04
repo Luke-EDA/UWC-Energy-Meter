@@ -34,7 +34,7 @@
         </div>
         <div class="build-badge" aria-label="Development build">
           <span>Development Build</span>
-          <strong>v1.8.0</strong>
+          <strong>v1.9.0</strong>
         </div>
       </div>
     </header>
@@ -126,7 +126,7 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.8.0 · Deployment & Network Diagnostics</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 1.8.1 · EnergyGuard Auto Discovery</span></div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
@@ -192,6 +192,14 @@
         <button id="closeDeviceDialog" class="icon-button" type="button" aria-label="Close device dialog">×</button>
       </div>
 
+      <div id="discoveryPanel" style="margin: 12px 0 18px; padding: 14px; border: 1px solid var(--border, #cbd5e1); border-radius: 10px;">
+        <label class="form-field form-field-wide"><span>Auto-detected EnergyGuard meters</span>
+          <select id="discoveredMeterSelect"><option value="">Searching for meters…</option></select>
+          <small>Only recently detected, unregistered meters appear here. Select a meter to fill in its details.</small>
+        </label>
+        <button id="refreshDiscoveredMeters" class="secondary-button" type="button" style="margin-top: 8px;">Refresh list</button>
+        <p id="discoveryStatus" class="form-message" role="status" aria-live="polite"></p>
+      </div>
       <div class="form-grid">
         <label class="form-field form-field-wide"><span>Device Name</span><input id="deviceNameInput" name="name" type="text" minlength="2" maxlength="80" placeholder="e.g. Generator Room" required></label>
         <label class="form-field form-field-wide"><span>Data Provider</span><select name="provider" required><option value="dummy">Dummy Simulator</option><option value="network">Network Adapter (not configured)</option></select><small>The network option is a protocol-neutral placeholder for future hardware.</small></label>

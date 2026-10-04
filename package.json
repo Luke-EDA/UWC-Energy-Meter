@@ -1,6 +1,6 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Protocol-agnostic multi-device energy dashboard with reporting exports and LAN deployment diagnostics.",
   "main": "src/server.js",
   "scripts": {
@@ -18,5 +18,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Deployment & Network Diagnostics"
+  "buildName": "EnergyGuard Auto Discovery"
 }

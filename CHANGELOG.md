@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.9.0 - EnergyGuard Auto Discovery
+- Listen for validated EnergyGuard announcement broadcasts on UDP 4210.
+- Display unregistered, recently detected meters in the Add Device dialog.
+- Register selected meters by permanent device ID and exclude registered meters from the discovery list.
+- Refresh registered meter IP addresses when new announcements arrive.
+- Preserve manual device setup and simulator support; live measurement ingestion is a separate integration step.
+
 ## v1.8.0 - Deployment & Network Diagnostics
 
 - Verified local-network access from a separate phone client while the server listens on `0.0.0.0`.

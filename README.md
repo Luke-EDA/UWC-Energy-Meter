@@ -1,5 +1,11 @@
 # UWC Energy Monitor
 
+## Version 1.9.0: EnergyGuard Auto Discovery
+
+The server now listens for `energyguard.announce.v1` UDP broadcasts on port 4210. Open **Add Device** to select a recently detected, unregistered EnergyGuard meter; its name and IP address are filled in automatically. Registered meters are excluded from discovery results by their permanent `device_id`, and updated broadcast sender addresses refresh their stored network address. The existing manual and simulator setup remains available. **Discovery and registration do not yet ingest live measurement values**; registered meters use the existing unconfigured network provider until the measurement adapter is implemented.
+
+Allow inbound UDP 4210 in Windows Firewall and ESET, and stop any separate PowerShell listener bound to that port before launching the server. Discovery is limited to broadcasts that reach the server's local network; it does not scan other subnets.
+
 ## Version 1.8.0: Deployment & Network Diagnostics
 
 Version 1.8.0 formalises local-network deployment for the final application handover. The server continues to listen on all interfaces by default, now validates configurable `HOST` and `PORT` values, lists usable LAN URLs at startup, and provides `/health` and `/api/health` diagnostic endpoints. A dedicated [NETWORK_SETUP.md](NETWORK_SETUP.md) guide covers Windows Firewall, ESET, network profiles, connectivity testing, static-address recommendations, and the security boundary between trusted LAN use and internet exposure.

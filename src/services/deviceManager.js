@@ -130,6 +130,14 @@ class DeviceManager {
     fs.renameSync(temporaryFile, CONFIG_FILE);
   }
 
+  refreshDiscoveredAddress(id, host, port) {
+    const device = this.findRuntimeDevice(id);
+    if (!device || !device.providerOptions?.energyguardDeviceId) return;
+    device.connection.host = host;
+    device.providerOptions.energyguardPort = port;
+    this.saveDevices();
+  }
+
   getProviders() {
     return listProviders();
   }
@@ -204,6 +212,15 @@ class DeviceManager {
     const providerOptions = input.providerOptions && typeof input.providerOptions === 'object'
       ? { ...input.providerOptions }
       : {};
+    if (providerOptions.energyguardDeviceId !== undefined) {
+      const identity = String(providerOptions.energyguardDeviceId).toUpperCase();
+      if (!/^[0-9A-F]{12}$/.test(identity)) throw new Error('Invalid EnergyGuard device ID.');
+      if (this.devices.some(device => device.id !== excludedId &&
+          String(device.providerOptions?.energyguardDeviceId || '').toUpperCase() === identity)) {
+        throw new Error('This EnergyGuard meter is already registered.');
+      }
+      providerOptions.energyguardDeviceId = identity;
+    }
     const existingPhaseConfig = excludedId === null
       ? {}
       : (this.findRuntimeDevice(excludedId)?.phaseConfig || {});

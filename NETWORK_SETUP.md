@@ -145,3 +145,7 @@ The server rejects an empty host or a port outside `1`–`65535`.
 6. Check Windows Firewall.
 7. Check ESET or other endpoint-security troubleshooting logs.
 8. Check Wi-Fi client isolation or site-network access-control policies.
+
+## EnergyGuard automatic discovery (v1.9.0)
+
+Allow inbound **UDP 4210** to the Node.js server in Windows Firewall and ESET. The server must be on a network that receives the meters' UDP broadcasts. Stop any PowerShell UDP listener using port 4210 before starting the app. Open **Add Device** and select a meter from the discovered list. Registered meters will not be offered again. The meter's IP may change through DHCP; subsequent announcements refresh its stored address. Discovery does not yet enable live measurement ingestion.
