@@ -1,4 +1,15 @@
+## v2.0.0 Full Release
+This package is the Release Build of UWC Energy Monitor. The Add Device menu includes Dummy Simulator and EnergyGuard UDP Meter; the unconfigured Network Adapter choice is not offered for new devices. The application footer credits EDA Technologies.
+
+**Upgrade:** Stop the service and back up your site-specific `src/config/devices.json` and runtime SQLite database before replacing application files. Do not overwrite them with sample data.
+
 # UWC Energy Monitor
+
+## Version 1.9.0: EnergyGuard Auto Discovery
+
+The server now listens for `energyguard.announce.v1` UDP broadcasts on port 4210. Open **Add Device** to select a recently detected, unregistered EnergyGuard meter; its name and IP address are filled in automatically. Registered meters are excluded from discovery results by their permanent `device_id`, and updated broadcast sender addresses refresh their stored network address. The existing manual and simulator setup remains available. **Discovery and registration do not yet ingest live measurement values**; registered meters use the existing unconfigured network provider until the measurement adapter is implemented.
+
+Allow inbound UDP 4210 in Windows Firewall and ESET, and stop any separate PowerShell listener bound to that port before launching the server. Discovery is limited to broadcasts that reach the server's local network; it does not scan other subnets.
 
 ## Version 1.8.0: Deployment & Network Diagnostics
 
@@ -100,3 +111,13 @@ After updating from an earlier version, run `npm install` to install the new `pd
 ### v1.7.2 export correction
 
 Device export histories are now assembled as independent L1, L2 and L3 series. A disabled or unavailable phase produces a gap only for that phase; other active phases continue to display and export their valid averages for the same reporting intervals.
+
+### Uncalibrated EnergyGuard measurement history
+Valid EnergyGuard UDP voltage/current readings are stored in the separate `energyguard_measurements` SQLite table even when `calibrated` is false or no power factor is supplied. Retrieve recent samples using `GET /api/energyguard/history?deviceId=DEVICE_NAME&limit=100`. Unknown power and power factor are stored as SQL NULL, not zero or an assumed value. The existing kWh, cost, power graphs and PDF/XLSX energy exports still use calibrated power history only. Invalid samples are not stored.
+
+### v1.9.2 power convention
+Per-phase displayed Power (kW) = measured RMS voltage × measured RMS current / 1000. Total Power is the sum of enabled phases. The label kW is retained by project convention, but the calculation yields apparent power (technically kVA). Energy and tariff outputs derived from this value are estimates, not measured real energy or billing-grade readings. Frequency and power factor are outside project scope. Valid uncalibrated measurements are retained in history. Existing SQLite frequency/PF columns are preserved for backward compatibility.
+
+### Background recording (v1.9.3)
+
+With `npm start` or `Run Service.bat` running, the server records valid UDP announcements from registered, enabled EnergyGuard meters even if every browser window is closed. Open `/api/recording-status` to see the number of processed historical samples, write failures and last successful record timestamp since server startup. Stopping the PowerShell window stops the server and recording.

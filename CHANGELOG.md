@@ -1,4 +1,53 @@
+## v2.0.0 — Full Release (Release Build)
+- Promote application version and visible build identification to v2.0.0 / Release Build.
+- Add “System designed by EDA Technologies” to dashboard and device details footers.
+- Retain the v1.9.3 Add Device menu correction: only Dummy Simulator and EnergyGuard UDP Meter are offered for new devices; legacy Network Adapter is retained only for editing previously configured devices.
+- Preserve the v1.9.3 background UDP measurement recording functionality and 5000 ms default update interval.
+
+### Device setup menu cleanup (v1.9.3)
+- Remove the unconfigured Network Adapter choice from new-device setup.
+- Preserve the legacy Network Adapter value when editing an existing legacy device.
+- Keep discovered EnergyGuard selections linked when their provider and host match.
+
+### Device setup refinement (v1.9.3)
+- Show EnergyGuard UDP Meter as the provider when selecting a discovered meter.
+- Default the update interval to 5000 ms for newly added devices and auto-registered EnergyGuard meters. Existing saved intervals are preserved.
+
+## v1.9.3 — Browser-independent recording
+
+- UDP announcements now trigger a server-side SQLite write immediately, without a browser or dashboard polling.
+- Serialized incoming samples for orderly recording and added `/api/recording-status` diagnostics.
+- Preserved the existing device registration, phase configuration, simulator, and export behavior.
+
+## v1.9.2 — Simplified Power Measurement
+- Derive per-phase displayed power as voltage × current / 1000; total power is the sum of enabled phases. Display unit remains kW by project convention, although this is apparent power (kVA).
+- Save valid calibrated and uncalibrated EnergyGuard samples in the standard history pipeline, and retain the raw V/A history.
+- Remove frequency and power-factor cards from device details and PDF summaries.
+- Stop generating simulated frequency/PF; retain legacy database columns for compatibility.
+- Energy (kWh) and tariff amounts are estimates based on apparent power, not measured real energy.
+
+## v1.9.1 — Uncalibrated measurement history update
+- Save valid EnergyGuard voltage/current UDP readings independently of calibration or power factor.
+- Preserve unknown power as NULL; keep energy and billing history calibrated-only.
+- Expose recent raw measurements through `/api/energyguard/history`.
+- Correct device-details online state and show N/A for unavailable power, PF and frequency.
+
+## v1.9.1 — EnergyGuard Live UDP Measurements
+
+- Registered EnergyGuard meters now use live UDP voltage/current readings rather than the unconfigured network adapter. Existing v1.9.0 registrations are migrated in memory automatically.
+- Simulator history is restricted to dummy devices.
+- Offline and invalid broadcast states are exposed by the device manager.
+- Uncalibrated readings are visible live but excluded from historical energy and tariff calculations. Calibrated measurements require a firmware-supplied power factor before power/history can be calculated.
+- No assumed frequency or power factor is presented as a measured value.
+
 # Changelog
+
+## v1.9.0 - EnergyGuard Auto Discovery
+- Listen for validated EnergyGuard announcement broadcasts on UDP 4210.
+- Display unregistered, recently detected meters in the Add Device dialog.
+- Register selected meters by permanent device ID and exclude registered meters from the discovery list.
+- Refresh registered meter IP addresses when new announcements arrive.
+- Preserve manual device setup and simulator support; live measurement ingestion is a separate integration step.
 
 ## v1.8.0 - Deployment & Network Diagnostics
 

@@ -1,12 +1,17 @@
 'use strict';
 
 const DummyProvider = require('./dummyProvider');
+const { EnergyGuardProvider } = require('./energyguardProvider');
 const UnconfiguredNetworkProvider = require('./unconfiguredNetworkProvider');
 
 const PROVIDERS = Object.freeze({
   dummy: {
     label: 'Dummy Simulator',
     create: (deviceConfig) => new DummyProvider(deviceConfig)
+  },
+  energyguard: {
+    label: 'EnergyGuard UDP Meter',
+    create: config => new EnergyGuardProvider(config)
   },
   network: {
     label: 'Network Adapter (not configured)',

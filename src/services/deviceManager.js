@@ -27,7 +27,8 @@ class DeviceManager {
   }
 
   normaliseStoredDevice(device) {
-    const provider = String(device.provider || device.type || 'dummy').toLowerCase();
+    let provider = String(device.provider || device.type || 'dummy').toLowerCase();
+    if (provider === 'network' && device.providerOptions?.energyguardDeviceId) provider = 'energyguard';
     const connection = device.connection && typeof device.connection === 'object'
       ? { ...device.connection }
       : { host: device.ipAddress || '' };
@@ -59,7 +60,7 @@ class DeviceManager {
       name: String(device.name),
       provider,
       enabled: device.enabled !== false,
-      pollInterval: Number(device.pollInterval || 1000),
+      pollInterval: Number(device.pollInterval || 5000),
       connection,
       providerOptions,
       phaseConfig
@@ -100,9 +101,13 @@ class DeviceManager {
       device.latestData = data;
       device.lastSuccess = data.timestamp || new Date().toISOString();
       device.status = 'online';
-      device.statusMessage = 'Receiving data';
+      device.statusMessage = data.source === 'energyguard-udp'
+        ? (data.calibrated ? 'Receiving live UDP measurements' : 'Live UDP measurements (uncalibrated)')
+        : 'Receiving data';
     } catch (error) {
-      if (error.code === 'ADAPTER_NOT_CONFIGURED') {
+      if (error.code === 'METER_INVALID') {
+        device.status = 'invalid';
+      } else if (error.code === 'ADAPTER_NOT_CONFIGURED') {
         device.status = 'adapter_not_configured';
       } else {
         device.status = device.lastSuccess ? 'offline' : 'error';
@@ -128,6 +133,14 @@ class DeviceManager {
     const temporaryFile = `${CONFIG_FILE}.tmp`;
     fs.writeFileSync(temporaryFile, `${JSON.stringify(serialisable, null, 2)}\n`, 'utf8');
     fs.renameSync(temporaryFile, CONFIG_FILE);
+  }
+
+  refreshDiscoveredAddress(id, host, port) {
+    const device = this.findRuntimeDevice(id);
+    if (!device || !device.providerOptions?.energyguardDeviceId) return;
+    device.connection.host = host;
+    device.providerOptions.energyguardPort = port;
+    this.saveDevices();
   }
 
   getProviders() {
@@ -199,11 +212,20 @@ class DeviceManager {
     const name = String(input.name || '').trim();
     const provider = String(input.provider || input.type || 'dummy').trim().toLowerCase();
     const host = String(input.connection?.host ?? input.host ?? input.ipAddress ?? '').trim();
-    const pollInterval = Number(input.pollInterval ?? 1000);
+    const pollInterval = Number(input.pollInterval ?? 5000);
     const enabled = input.enabled !== false;
     const providerOptions = input.providerOptions && typeof input.providerOptions === 'object'
       ? { ...input.providerOptions }
       : {};
+    if (providerOptions.energyguardDeviceId !== undefined) {
+      const identity = String(providerOptions.energyguardDeviceId).toUpperCase();
+      if (!/^[0-9A-F]{12}$/.test(identity)) throw new Error('Invalid EnergyGuard device ID.');
+      if (this.devices.some(device => device.id !== excludedId &&
+          String(device.providerOptions?.energyguardDeviceId || '').toUpperCase() === identity)) {
+        throw new Error('This EnergyGuard meter is already registered.');
+      }
+      providerOptions.energyguardDeviceId = identity;
+    }
     const existingPhaseConfig = excludedId === null
       ? {}
       : (this.findRuntimeDevice(excludedId)?.phaseConfig || {});

@@ -17,6 +17,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { WebSocketServer } = require('ws');
 
 const deviceManager = require('./services/deviceManager');
+const discovery = require('./services/energyguardDiscovery');
 const exportService = require('./exportService');
 
 const DEFAULT_PORT = 3000;
@@ -131,6 +132,20 @@ db.serialize(() => {
     UNIQUE(device_id, ts, phase)
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_phase_readings_device_phase_ts ON phase_readings(device_id, phase, ts)');
+  // Raw EnergyGuard V/A history is independent of billable power history.
+  // NULL power values mean unknown, never zero or an assumed power factor.
+  db.run(`CREATE TABLE IF NOT EXISTS energyguard_measurements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL, ts INTEGER NOT NULL,
+    meter_id TEXT NOT NULL, sequence INTEGER,
+    valid INTEGER NOT NULL, calibrated INTEGER NOT NULL,
+    frequency_hz REAL, power_factor REAL, total_power_kw REAL,
+    l1_voltage REAL NOT NULL, l1_current REAL NOT NULL, l1_power_kw REAL,
+    l2_voltage REAL NOT NULL, l2_current REAL NOT NULL, l2_power_kw REAL,
+    l3_voltage REAL NOT NULL, l3_current REAL NOT NULL, l3_power_kw REAL,
+    UNIQUE(meter_id, ts)
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_energyguard_measurements_device_ts ON energyguard_measurements(device_id, ts)');
   db.run(`CREATE TABLE IF NOT EXISTS phase_config_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     device_id TEXT NOT NULL,
@@ -220,13 +235,10 @@ function normaliseReading(body) {
   const deviceId = String(body.deviceId || body.device_id || 'uwc-meter-001');
   const ts = Number(body.ts || Date.now());
   const neutralPresent = Boolean(body.neutralPresent ?? body.neutral_present ?? true);
-  const frequencyHz = body.frequencyHz ?? body.frequency_hz ?? null;
-  const powerFactor = Number(body.powerFactor ?? body.power_factor ?? 1);
   const phaseConfig = deviceManager.getPhaseConfigByName(deviceId);
   const phases = {};
 
   if (!Number.isFinite(ts)) throw new Error('Invalid reading timestamp.');
-  if (!Number.isFinite(powerFactor)) throw new Error('Invalid power factor.');
 
   for (const phase of ['l1', 'l2', 'l3']) {
     const enabled = phaseConfig[phase]?.enabled !== false;
@@ -243,7 +255,7 @@ function normaliseReading(body) {
       enabled: true,
       voltage,
       current,
-      powerKw: (voltage * current * powerFactor) / 1000
+      powerKw: (voltage * current) / 1000
     };
   }
 
@@ -255,8 +267,8 @@ function normaliseReading(body) {
     deviceId,
     ts,
     neutralPresent: neutralPresent ? 1 : 0,
-    frequencyHz,
-    powerFactor,
+    frequencyHz: null,
+    powerFactor: 1,
     totalPowerKw,
     phases,
     activePhaseCount: Object.values(phases).filter((phase) => phase.enabled).length
@@ -605,11 +617,10 @@ function getDevicesApi() {
     const activePhases = ['l1', 'l2', 'l3'].filter((phase) => device.phaseConfig?.[phase]?.enabled !== false);
     const voltages = activePhases.map((phase) => Number(device.data?.voltage?.[phase])).filter(Number.isFinite);
     const currents = activePhases.map((phase) => Number(device.data?.current?.[phase])).filter(Number.isFinite);
-    const powerFactor = Number(device.data?.powerFactor ?? 1);
     const averageVoltage = voltages.length ? voltages.reduce((sum, value) => sum + value, 0) / voltages.length : null;
     const totalCurrent = currents.length ? currents.reduce((sum, value) => sum + value, 0) : null;
-    const totalPower = averageVoltage !== null && totalCurrent !== null
-      ? averageVoltage * totalCurrent * powerFactor / 1000
+    const totalPower = activePhases.length && activePhases.every(p => Number.isFinite(Number(device.data?.voltage?.[p])) && Number.isFinite(Number(device.data?.current?.[p])))
+      ? activePhases.reduce((sum, p) => sum + Number(device.data.voltage[p]) * Number(device.data.current[p]), 0) / 1000
       : null;
 
     return {
@@ -628,7 +639,8 @@ function getDevicesApi() {
       averageVoltage: averageVoltage === null ? null : Number(averageVoltage.toFixed(1)),
       totalCurrent: totalCurrent === null ? null : Number(totalCurrent.toFixed(1)),
       totalPower: totalPower === null ? null : Number(totalPower.toFixed(2)),
-      frequency: device.data?.frequency ?? null,
+      calibrated: device.data?.calibrated ?? null,
+      measurementSource: device.data?.source || (device.provider === 'dummy' ? 'simulator' : null),
       lastUpdate: device.data?.timestamp ?? null,
       phaseConfig: device.phaseConfig
     };
@@ -662,6 +674,24 @@ app.get('/api/devices', async () => {
 });
 
 app.get('/api/providers', async () => deviceManager.getProviders());
+
+app.get('/api/discovered-devices', async () => discovery.available());
+
+app.post('/api/discovered-devices/:deviceId/register', async (request, reply) => {
+  try {
+    const found = discovery.get(request.params.deviceId);
+    if (!found) return reply.code(404).send({ error: 'Meter is no longer available or is already registered.' });
+    const device = deviceManager.addDevice({
+      name: String(request.body?.name || found.name).trim(),
+      provider: 'energyguard',
+      connection: { host: found.ip },
+      providerOptions: { energyguardDeviceId: found.deviceId, energyguardPort: found.port },
+      pollInterval: 5000,
+      enabled: true
+    });
+    return reply.code(201).send(device);
+  } catch (error) { return reply.code(400).send({ error: error.message }); }
+});
 
 app.get('/api/settings', async () => getSettings());
 
@@ -726,8 +756,45 @@ app.delete('/api/devices/:id', async (request, reply) => {
     reply.code(status).send({ error: err.message });
   }
 });
+function latestEnergyguardReading(deviceId) {
+  return new Promise((resolve, reject) => db.get(
+    'SELECT * FROM energyguard_measurements WHERE device_id = ? ORDER BY ts DESC LIMIT 1',
+    [deviceId], (err, row) => {
+      if (err) return reject(err);
+      if (!row) return resolve(null);
+      const reading = {
+        deviceId: row.device_id, ts: row.ts, neutralPresent: true,
+        totalPowerKw: row.total_power_kw, calibrated: Boolean(row.calibrated),
+        valid: Boolean(row.valid), phaseConfig: deviceManager.getPhaseConfigByName(deviceId)
+      };
+      for (const phase of ['l1', 'l2', 'l3']) reading[phase] = {
+        voltage: row[`${phase}_voltage`], current: row[`${phase}_current`],
+        powerKw: row[`${phase}_power_kw`]
+      };
+      resolve(reading);
+    }
+  ));
+}
+
+app.get('/api/energyguard/history', async (request) => {
+  const deviceId = String(request.query.deviceId || '');
+  const device = deviceManager.getDevices().find(d => d.name === deviceId && d.provider === 'energyguard');
+  if (!device) return [];
+  const limit = Math.min(1000, Math.max(1, Number(request.query.limit) || 100));
+  return new Promise((resolve, reject) => db.all(
+    'SELECT * FROM energyguard_measurements WHERE device_id = ? ORDER BY ts DESC LIMIT ?',
+    [deviceId, limit], (err, rows) => err ? reject(err) : resolve(rows)
+  ));
+});
+
 app.get('/api/latest', async (request) => {
   const deviceId = request.query.deviceId || 'uwc-meter-001';
+  const device = deviceManager.getDevices().find(d => d.name === deviceId);
+  if (device?.provider === 'energyguard') {
+    const live = energyguard.latest(device.providerOptions?.energyguardDeviceId);
+    if (live && live.valid) return energyguardReadingToApi(device, live);
+    return latestEnergyguardReading(deviceId);
+  }
   return rowToApi(await latestReading(deviceId), deviceId);
 });
 app.get('/api/history', async (request) => history(request.query.deviceId || 'uwc-meter-001', request.query.range));
@@ -792,6 +859,7 @@ app.get('/api/health', async () => healthPayload());
 
 const start = async () => {
   await app.listen({ port: PORT, host: HOST });
+  discovery.start(app.log);
 
   const urls = getAccessUrls();
   const separator = '='.repeat(48);
@@ -814,6 +882,76 @@ start().catch(err => {
 const server = app.server;
 const wss = new WebSocketServer({ server, path: '/ws' });
 
+// Record valid V/A samples irrespective of calibration. Derived kW assumes PF=1.
+const energyguard = require('./services/energyguardProvider');
+const energyguardHistory = require('./services/energyguardHistory');
+function energyguardReadingToApi(device, sample) {
+  const phases = {};
+  for (const phase of ['l1', 'l2', 'l3']) {
+    phases[phase] = {
+      voltage: sample.voltage[phase], current: sample.current[phase],
+      powerKw: sample.voltage[phase] * sample.current[phase] / 1000
+    };
+  }
+  return {
+    deviceId: device.name, ts: sample.receivedAt, neutralPresent: true,
+    calibrated: sample.calibrated, valid: sample.valid,
+    totalPowerKw: Object.entries(phases).reduce((sum, [phase, p]) => sum + (device.phaseConfig?.[phase]?.enabled === false ? 0 : p.powerKw), 0),
+    phaseConfig: device.phaseConfig, ...phases
+  };
+}
+// Record broadcasts as they arrive, independently of HTTP requests and browsers.
+// Serialize processing so each accepted UDP sample reaches SQLite in order.
+let measurementQueue = Promise.resolve();
+let recordedSamples = 0;
+let recordingFailures = 0;
+let lastRecordedAt = null;
+async function recordEnergyguardSample(sample) {
+  for (const device of deviceManager.getDevices()) {
+    if (device.provider !== 'energyguard' || !device.enabled ||
+        String(device.providerOptions?.energyguardDeviceId || '').toUpperCase() !== sample.id) continue;
+    if (!sample.valid) continue;
+    const api = energyguardReadingToApi(device, sample);
+    try {
+      const result = await enqueueDbWrite(() => runDb(`INSERT OR IGNORE INTO energyguard_measurements (
+        device_id, ts, meter_id, sequence, valid, calibrated, frequency_hz, power_factor, total_power_kw,
+        l1_voltage, l1_current, l1_power_kw, l2_voltage, l2_current, l2_power_kw,
+        l3_voltage, l3_current, l3_power_kw
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        device.name, sample.receivedAt, sample.id, sample.sequence ?? null,
+        1, sample.calibrated ? 1 : 0, null, 1, api.totalPowerKw,
+        ...['l1','l2','l3'].flatMap(phase => [api[phase].voltage, api[phase].current, api[phase].powerKw])
+      ]));
+      if (result.changes) broadcast({ type: 'reading', data: api });
+    } catch (err) {
+      recordingFailures++;
+      app.log.error({ err }, 'EnergyGuard raw measurement write failed');
+    }
+    const payload = energyguardHistory.makeReading(device, sample);
+    if (!payload) continue;
+    try {
+      const reading = normaliseReading(payload);
+      if (!reading.activePhaseCount) continue;
+      await insertReading(reading);
+      energyguardHistory.markSaved(sample);
+      recordedSamples++;
+      lastRecordedAt = sample.receivedAt;
+    } catch (err) {
+      recordingFailures++;
+      app.log.error({ err }, 'EnergyGuard power history write failed');
+    }
+  }
+}
+discovery.onMeasurement(sample => {
+  measurementQueue = measurementQueue.then(() => recordEnergyguardSample(sample))
+    .catch(err => { recordingFailures++; app.log.error({ err }, 'EnergyGuard background recording failed'); });
+});
+app.get('/api/recording-status', async () => ({
+  status: 'running', source: 'energyguard-udp',
+  recordedSamples, recordingFailures, lastRecordedAt,
+  browserRequired: false
+}));
+
 wss.on('connection', ws => {
   ws.send(JSON.stringify({ type: 'hello', data: { service: 'UWC Energy Monitor', ts: Date.now() } }));
 });
@@ -828,7 +966,7 @@ if (ENABLE_SIMULATOR) {
 
         for (const device of devices) {
 
-            if (!device.enabled || !device.data) continue;
+            if (!device.enabled || !device.data || device.provider !== 'dummy') continue;
             if (Object.values(device.phaseConfig || {}).every((phase) => phase.enabled === false)) continue;
 
             const data = device.data;
@@ -841,9 +979,7 @@ if (ENABLE_SIMULATOR) {
 
                 neutralPresent: true,
 
-                frequencyHz: data.frequency,
 
-                powerFactor: data.powerFactor,
 
                 l1: {
                     voltage: data.voltage.l1,

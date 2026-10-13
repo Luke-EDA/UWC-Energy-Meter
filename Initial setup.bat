@@ -1,0 +1,3 @@
+@echo off
+set "UWC_APP_DIR=%~dp0"
+start "UWC Energy Monitor - Initial Setup" powershell.exe -NoProfile -NoExit -Command "Set-Location -LiteralPath $env:UWC_APP_DIR; if (-not (Get-Command node.exe -ErrorAction SilentlyContinue) -or -not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) { Write-Host 'Node.js and npm are required. Install Node.js LTS from https://nodejs.org/en/download/ then reopen this file.' -ForegroundColor Red; return }; & npm.cmd install; if ($LASTEXITCODE -eq 0) { Write-Host 'Setup complete, Use "Run Service.bat" to launch the service' -ForegroundColor Green } else { Write-Host 'Setup failed. Review the npm error messages above.' -ForegroundColor Red }"
