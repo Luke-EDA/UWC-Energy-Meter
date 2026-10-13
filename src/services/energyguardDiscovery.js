@@ -9,6 +9,12 @@ const PORT = Number(process.env.ENERGYGUARD_DISCOVERY_PORT || 4210);
 const TTL_MS = 30000;
 const seen = new Map();
 let socket;
+const measurementHandlers = new Set();
+function onMeasurement(handler) {
+  if (typeof handler !== 'function') throw new TypeError('Measurement handler must be a function');
+  measurementHandlers.add(handler);
+  return () => measurementHandlers.delete(handler);
+}
 
 function validId(value) { return typeof value === 'string' && /^[0-9a-fA-F]{12}$/.test(value); }
 function registered(id) {
@@ -29,7 +35,11 @@ function receive(buffer, remote) {
   if (!message || message.type !== 'energyguard.announce.v1' ||
       message.schema !== 'energyguard.measurement.v1' || !validId(message.device_id)) return;
   const deviceId = message.device_id.toUpperCase();
-  energyguard.accept(message, remote.address);
+  const accepted = energyguard.accept(message, remote.address);
+  if (accepted) {
+    const sample = energyguard.latest(deviceId);
+    if (sample) for (const handler of measurementHandlers) handler({ ...sample });
+  }
   const name = typeof message.name === 'string' && message.name.trim().length <= 80 && message.name.trim().length >= 2
     ? message.name.trim() : `EnergyGuard-${deviceId.slice(-4)}`;
   const port = Number(message.port);
@@ -51,4 +61,4 @@ function start(logger = console) {
 }
 function stop() { if (socket) { socket.close(); socket = null; } }
 function get(id) { return available().find(item => item.deviceId === String(id).toUpperCase()); }
-module.exports = { start, stop, available, get, receive };
+module.exports = { start, stop, available, get, receive, onMeasurement };

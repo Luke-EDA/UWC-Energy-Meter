@@ -1,3 +1,24 @@
+## v2.0.0 — Full Release (Release Build)
+- Promote application version and visible build identification to v2.0.0 / Release Build.
+- Add “System designed by EDA Technologies” to dashboard and device details footers.
+- Retain the v1.9.3 Add Device menu correction: only Dummy Simulator and EnergyGuard UDP Meter are offered for new devices; legacy Network Adapter is retained only for editing previously configured devices.
+- Preserve the v1.9.3 background UDP measurement recording functionality and 5000 ms default update interval.
+
+### Device setup menu cleanup (v1.9.3)
+- Remove the unconfigured Network Adapter choice from new-device setup.
+- Preserve the legacy Network Adapter value when editing an existing legacy device.
+- Keep discovered EnergyGuard selections linked when their provider and host match.
+
+### Device setup refinement (v1.9.3)
+- Show EnergyGuard UDP Meter as the provider when selecting a discovered meter.
+- Default the update interval to 5000 ms for newly added devices and auto-registered EnergyGuard meters. Existing saved intervals are preserved.
+
+## v1.9.3 — Browser-independent recording
+
+- UDP announcements now trigger a server-side SQLite write immediately, without a browser or dashboard polling.
+- Serialized incoming samples for orderly recording and added `/api/recording-status` diagnostics.
+- Preserved the existing device registration, phase configuration, simulator, and export behavior.
+
 ## v1.9.2 — Simplified Power Measurement
 - Derive per-phase displayed power as voltage × current / 1000; total power is the sum of enabled phases. Display unit remains kW by project convention, although this is apparent power (kVA).
 - Save valid calibrated and uncalibrated EnergyGuard samples in the standard history pipeline, and retain the raw V/A history.

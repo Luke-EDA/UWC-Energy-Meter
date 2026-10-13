@@ -156,3 +156,7 @@ EnergyGuard broadcasts on UDP 4210 update registered meters live. The current fi
 
 ### Meter measurement convention (v1.9.2)
 Live UDP voltage and current are accepted when valid, regardless of calibration status. Power displayed as kW is calculated as V × A / 1000 (technically apparent power in kVA). Historical energy and costs are estimates.
+
+## Windows customer launchers
+
+For first-time installation and everyday startup, see `CUSTOMER_SETUP.md`. Use `Initial setup.bat` to install dependencies and `Run Service.bat` to start the server and open the local browser.

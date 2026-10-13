@@ -1,3 +1,8 @@
+## v2.0.0 Full Release
+This package is the Release Build of UWC Energy Monitor. The Add Device menu includes Dummy Simulator and EnergyGuard UDP Meter; the unconfigured Network Adapter choice is not offered for new devices. The application footer credits EDA Technologies.
+
+**Upgrade:** Stop the service and back up your site-specific `src/config/devices.json` and runtime SQLite database before replacing application files. Do not overwrite them with sample data.
+
 # UWC Energy Monitor
 
 ## Version 1.9.0: EnergyGuard Auto Discovery
@@ -112,3 +117,7 @@ Valid EnergyGuard UDP voltage/current readings are stored in the separate `energ
 
 ### v1.9.2 power convention
 Per-phase displayed Power (kW) = measured RMS voltage × measured RMS current / 1000. Total Power is the sum of enabled phases. The label kW is retained by project convention, but the calculation yields apparent power (technically kVA). Energy and tariff outputs derived from this value are estimates, not measured real energy or billing-grade readings. Frequency and power factor are outside project scope. Valid uncalibrated measurements are retained in history. Existing SQLite frequency/PF columns are preserved for backward compatibility.
+
+### Background recording (v1.9.3)
+
+With `npm start` or `Run Service.bat` running, the server records valid UDP announcements from registered, enabled EnergyGuard meters even if every browser window is closed. Open `/api/recording-status` to see the number of processed historical samples, write failures and last successful record timestamp since server startup. Stopping the PowerShell window stops the server and recording.

@@ -32,9 +32,9 @@
           </button>
           <span class="theme-toggle-label">Toggle Dark Mode</span>
         </div>
-        <div class="build-badge" aria-label="Development build">
-          <span>Development Build</span>
-          <strong>v1.9.2</strong>
+        <div class="build-badge" aria-label="Release Build">
+          <span>Release Build</span>
+          <strong>v2.0.0</strong>
         </div>
       </div>
     </header>
@@ -126,7 +126,8 @@
     </main>
 
     <footer class="footer">
-      <div><strong>UWC Energy Monitor</strong><span>Version 1.8.1 · EnergyGuard Auto Discovery</span></div>
+      <div><strong>UWC Energy Monitor</strong><span>Version 2.0.0 · Full Release</span></div>
+      <div class="footer-credit">System designed by EDA Technologies</div>
       <div class="footer-status"><span>Provider Framework</span><span>SQLite Connected</span><span id="footerDeviceStatus">0 Devices Online</span></div>
     </footer>
   </div>
@@ -202,9 +203,9 @@
       </div>
       <div class="form-grid">
         <label class="form-field form-field-wide"><span>Device Name</span><input id="deviceNameInput" name="name" type="text" minlength="2" maxlength="80" placeholder="e.g. Generator Room" required></label>
-        <label class="form-field form-field-wide"><span>Data Provider</span><select name="provider" required><option value="dummy">Dummy Simulator</option><option value="network">Network Adapter (not configured)</option></select><small>The network option is a protocol-neutral placeholder for future hardware.</small></label>
+        <label class="form-field form-field-wide"><span>Data Provider</span><select name="provider" required><option value="dummy">Dummy Simulator</option><option value="energyguard">EnergyGuard UDP Meter</option></select><small>Choose a simulator or an EnergyGuard UDP meter.</small></label>
         <label class="form-field form-field-wide"><span>Network Host</span><input name="host" type="text" maxlength="255" placeholder="e.g. 192.168.1.103 or meter-room.local"><small>Optional until the device communication method is defined.</small></label>
-        <label class="form-field form-field-wide"><span>Update Interval</span><div class="input-with-unit"><input name="pollInterval" type="number" min="250" max="60000" step="250" value="1000" required><span>ms</span></div></label>
+        <label class="form-field form-field-wide"><span>Update Interval</span><div class="input-with-unit"><input name="pollInterval" type="number" min="250" max="60000" step="250" value="5000" required><span>ms</span></div></label>
         <label class="checkbox-field form-field-wide"><input name="enabled" type="checkbox" checked><span id="enabledLabel">Enable this device immediately</span></label>
       </div>
 

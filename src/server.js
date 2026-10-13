@@ -686,7 +686,7 @@ app.post('/api/discovered-devices/:deviceId/register', async (request, reply) =>
       provider: 'energyguard',
       connection: { host: found.ip },
       providerOptions: { energyguardDeviceId: found.deviceId, energyguardPort: found.port },
-      pollInterval: 1000,
+      pollInterval: 5000,
       enabled: true
     });
     return reply.code(201).send(device);
@@ -900,15 +900,20 @@ function energyguardReadingToApi(device, sample) {
     phaseConfig: device.phaseConfig, ...phases
   };
 }
-const rawSaved = new Map();
-setInterval(async () => {
+// Record broadcasts as they arrive, independently of HTTP requests and browsers.
+// Serialize processing so each accepted UDP sample reaches SQLite in order.
+let measurementQueue = Promise.resolve();
+let recordedSamples = 0;
+let recordingFailures = 0;
+let lastRecordedAt = null;
+async function recordEnergyguardSample(sample) {
   for (const device of deviceManager.getDevices()) {
-    if (device.provider !== 'energyguard' || !device.enabled) continue;
-    const sample = energyguard.latest(device.providerOptions?.energyguardDeviceId);
-    if (!sample || !sample.valid || rawSaved.get(sample.id) === sample.receivedAt) continue;
+    if (device.provider !== 'energyguard' || !device.enabled ||
+        String(device.providerOptions?.energyguardDeviceId || '').toUpperCase() !== sample.id) continue;
+    if (!sample.valid) continue;
     const api = energyguardReadingToApi(device, sample);
     try {
-      await enqueueDbWrite(() => runDb(`INSERT OR IGNORE INTO energyguard_measurements (
+      const result = await enqueueDbWrite(() => runDb(`INSERT OR IGNORE INTO energyguard_measurements (
         device_id, ts, meter_id, sequence, valid, calibrated, frequency_hz, power_factor, total_power_kw,
         l1_voltage, l1_current, l1_power_kw, l2_voltage, l2_current, l2_power_kw,
         l3_voltage, l3_current, l3_power_kw
@@ -917,13 +922,11 @@ setInterval(async () => {
         1, sample.calibrated ? 1 : 0, null, 1, api.totalPowerKw,
         ...['l1','l2','l3'].flatMap(phase => [api[phase].voltage, api[phase].current, api[phase].powerKw])
       ]));
-      rawSaved.set(sample.id, sample.receivedAt);
-      broadcast({ type: 'reading', data: api });
+      if (result.changes) broadcast({ type: 'reading', data: api });
     } catch (err) {
+      recordingFailures++;
       app.log.error({ err }, 'EnergyGuard raw measurement write failed');
-      continue;
     }
-    // Derived kWh and cost estimates use V × I (assumed PF=1).
     const payload = energyguardHistory.makeReading(device, sample);
     if (!payload) continue;
     try {
@@ -931,12 +934,23 @@ setInterval(async () => {
       if (!reading.activePhaseCount) continue;
       await insertReading(reading);
       energyguardHistory.markSaved(sample);
+      recordedSamples++;
+      lastRecordedAt = sample.receivedAt;
     } catch (err) {
-      if (err.code !== 'SQLITE_CONSTRAINT') app.log.error({ err }, 'EnergyGuard power history write failed');
+      recordingFailures++;
+      app.log.error({ err }, 'EnergyGuard power history write failed');
     }
   }
-}, 1000);
-
+}
+discovery.onMeasurement(sample => {
+  measurementQueue = measurementQueue.then(() => recordEnergyguardSample(sample))
+    .catch(err => { recordingFailures++; app.log.error({ err }, 'EnergyGuard background recording failed'); });
+});
+app.get('/api/recording-status', async () => ({
+  status: 'running', source: 'energyguard-udp',
+  recordedSamples, recordingFailures, lastRecordedAt,
+  browserRequired: false
+}));
 
 wss.on('connection', ws => {
   ws.send(JSON.stringify({ type: 'hello', data: { service: 'UWC Energy Monitor', ts: Date.now() } }));

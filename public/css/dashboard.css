@@ -956,3 +956,7 @@ body,
 .export-format-group label { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .export-checkbox { display: flex; align-items: flex-start; gap: 10px; font-weight: 600; }
 .export-checkbox input { margin-top: 3px; }
+
+/* v2.0.0 full-release attribution */
+.footer-credit { text-align: center; font-weight: 500; }
+@media (max-width: 850px) { .footer { flex-wrap: wrap; } .footer-credit { order: 3; flex-basis: 100%; text-align: left; } }

@@ -60,7 +60,7 @@ class DeviceManager {
       name: String(device.name),
       provider,
       enabled: device.enabled !== false,
-      pollInterval: Number(device.pollInterval || 1000),
+      pollInterval: Number(device.pollInterval || 5000),
       connection,
       providerOptions,
       phaseConfig
@@ -212,7 +212,7 @@ class DeviceManager {
     const name = String(input.name || '').trim();
     const provider = String(input.provider || input.type || 'dummy').trim().toLowerCase();
     const host = String(input.connection?.host ?? input.host ?? input.ipAddress ?? '').trim();
-    const pollInterval = Number(input.pollInterval ?? 1000);
+    const pollInterval = Number(input.pollInterval ?? 5000);
     const enabled = input.enabled !== false;
     const providerOptions = input.providerOptions && typeof input.providerOptions === 'object'
       ? { ...input.providerOptions }

@@ -348,7 +348,8 @@ function selectDiscoveredMeter(id) {
   const meter = discoveredMeters.find(item => item.deviceId === id);
   if (!meter) return;
   elements.deviceForm.elements.name.value = meter.name;
-  elements.deviceForm.elements.provider.value = 'network';
+  elements.deviceForm.elements.provider.value = 'energyguard';
+  elements.deviceForm.elements.pollInterval.value = 5000;
   elements.deviceForm.elements.host.value = meter.ip;
 }
 
@@ -368,7 +369,15 @@ function setDialogMode(device = null) {
     elements.deleteDeviceButton.hidden = false;
     elements.enabledLabel.textContent = 'Enable this device';
     elements.deviceForm.elements.name.value = device.name;
-    elements.deviceForm.elements.provider.value = device.provider || device.type || 'dummy';
+    const savedProvider = device.provider || device.type || 'dummy';
+    const providerSelect = elements.deviceForm.elements.provider;
+    providerSelect.querySelector('option[data-legacy-provider]')?.remove();
+    if (savedProvider === 'network') {
+      const legacyOption = new Option('Network Adapter (legacy device)', 'network');
+      legacyOption.dataset.legacyProvider = 'true';
+      providerSelect.add(legacyOption);
+    }
+    providerSelect.value = savedProvider;
     elements.deviceForm.elements.host.value = device.connection?.host || device.ipAddress || '';
     elements.deviceForm.elements.pollInterval.value = device.pollInterval;
     elements.deviceForm.elements.enabled.checked = device.enabled !== false;
@@ -378,8 +387,9 @@ function setDialogMode(device = null) {
     elements.saveDeviceButton.textContent = 'Save Device';
     elements.deleteDeviceButton.hidden = true;
     elements.enabledLabel.textContent = 'Enable this device immediately';
+    elements.deviceForm.elements.provider.querySelector('option[data-legacy-provider]')?.remove();
     elements.deviceForm.elements.provider.value = 'dummy';
-    elements.deviceForm.elements.pollInterval.value = 1000;
+    elements.deviceForm.elements.pollInterval.value = 5000;
     elements.deviceForm.elements.enabled.checked = true;
   }
 }
@@ -673,7 +683,7 @@ function initialiseDialogs() {
     field.addEventListener('change', () => {
       if (!selectedDiscoveryId) return;
       const meter = discoveredMeters.find(item => item.deviceId === selectedDiscoveryId);
-      if (meter && (elements.deviceForm.elements.provider.value !== 'network' || elements.deviceForm.elements.host.value !== meter.ip)) {
+      if (meter && (elements.deviceForm.elements.provider.value !== 'energyguard' || elements.deviceForm.elements.host.value !== meter.ip)) {
         selectedDiscoveryId = '';
         document.getElementById('discoveredMeterSelect').value = '';
       }
