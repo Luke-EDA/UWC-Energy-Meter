@@ -237,7 +237,7 @@ function getLatestTimestamp(devices) {
 function renderSummary(devices) {
   const onlineDevices = devices.filter(isDeviceOnline);
   const totalPower = onlineDevices.reduce((sum, device) => sum + Number(device.totalPower || 0), 0);
-  const validVoltages = onlineDevices.map((device) => Number(device.averageVoltage)).filter(Number.isFinite);
+  const validVoltages = onlineDevices.map((device) => device.averageVoltage).filter(v => typeof v === 'number' && Number.isFinite(v));
   const averageVoltage = validVoltages.length
     ? validVoltages.reduce((sum, value) => sum + value, 0) / validVoltages.length
     : 0;
@@ -278,9 +278,10 @@ function createDeviceCard(device) {
 
   const content = hasLiveData
     ? `<div class="device-metrics">
-        ${createMetricRow('Voltage', `${formatNumber(device.averageVoltage, 1)} V`)}
-        ${createMetricRow('Current', `${formatNumber(device.totalCurrent, 1)} A`)}
-        ${createMetricRow('Power', `${formatNumber(device.totalPower, 2)} kW`)}
+        ${createMetricRow('Voltage', device.averageVoltage == null ? 'N/A' : `${formatNumber(device.averageVoltage, 1)} V`)}
+        ${createMetricRow('Current', device.totalCurrent == null ? 'N/A' : `${formatNumber(device.totalCurrent, 1)} A`)}
+        ${createMetricRow('Power', device.totalPower == null ? 'N/A' : `${formatNumber(device.totalPower, 2)} kW`)}
+        ${device.provider === 'energyguard' ? createMetricRow('Energy (provisional)', device.energyWh == null ? 'N/A' : `${formatNumber(device.energyWh, 2)} Wh`) : ''}
         ${createMetricRow('Last Update', formatTime(device.lastUpdate), 'last-update')}
       </div>`
     : `<div class="disabled-message">${escapeHtml(status.message)}</div>`;

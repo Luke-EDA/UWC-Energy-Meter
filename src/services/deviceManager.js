@@ -11,6 +11,7 @@ const PHASE_KEYS = ['l1', 'l2', 'l3'];
 class DeviceManager {
   constructor() {
     this.devices = [];
+    this.readingHandlers = new Set();
     this.loadDevices();
     this.updateTimer = setInterval(() => this.pollDueDevices(), SCHEDULER_INTERVAL_MS);
   }
@@ -92,6 +93,8 @@ class DeviceManager {
     }
   }
 
+  onReading(handler) { this.readingHandlers.add(handler); return () => this.readingHandlers.delete(handler); }
+
   async pollDevice(device) {
     device.polling = true;
     device.lastAttempt = new Date().toISOString();
@@ -101,7 +104,12 @@ class DeviceManager {
       device.latestData = data;
       device.lastSuccess = data.timestamp || new Date().toISOString();
       device.status = 'online';
-      device.statusMessage = data.source === 'energyguard-udp'
+      if (data.source === 'energyguard-http') for (const handler of this.readingHandlers) {
+        Promise.resolve().then(() => handler(this.toPublicDevice(device), data)).catch(() => {});
+      }
+      device.statusMessage = data.source === 'energyguard-http'
+        ? 'Live ADE9000 HTTP measurements (uncalibrated)'
+        : data.source === 'energyguard-udp'
         ? (data.calibrated ? 'Receiving live UDP measurements' : 'Live UDP measurements (uncalibrated)')
         : 'Receiving data';
     } catch (error) {

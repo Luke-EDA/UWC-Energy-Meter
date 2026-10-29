@@ -1,6 +1,6 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Protocol-agnostic multi-device energy dashboard with reporting exports and LAN deployment diagnostics.",
   "main": "src/server.js",
   "scripts": {
@@ -18,5 +18,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "Release Build"
+  "buildName": "EnergyGuard Live HTTP Integration"
 }

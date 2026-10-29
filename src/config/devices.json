@@ -1,64 +1,17 @@
 [
   {
     "id": 1,
-    "name": "Main Distribution Board",
-    "provider": "dummy",
+    "name": "EnergyGuard-B3C8",
+    "provider": "energyguard",
     "enabled": true,
-    "pollInterval": 1000,
+    "pollInterval": 5000,
     "connection": {
-      "host": "192.168.1.100"
+      "host": "192.168.0.155"
     },
-    "providerOptions": {},
-    "phaseConfig": {
-      "l1": {
-        "enabled": true,
-        "label": ""
-      },
-      "l2": {
-        "enabled": true,
-        "label": ""
-      },
-      "l3": {
-        "enabled": true,
-        "label": ""
-      }
-    }
-  },
-  {
-    "id": 2,
-    "name": "Workshop",
-    "provider": "dummy",
-    "enabled": true,
-    "pollInterval": 1000,
-    "connection": {
-      "host": "192.168.1.101"
+    "providerOptions": {
+      "energyguardDeviceId": "14335C92B3C8",
+      "energyguardPort": 80
     },
-    "providerOptions": {},
-    "phaseConfig": {
-      "l1": {
-        "enabled": true,
-        "label": ""
-      },
-      "l2": {
-        "enabled": true,
-        "label": ""
-      },
-      "l3": {
-        "enabled": true,
-        "label": ""
-      }
-    }
-  },
-  {
-    "id": 3,
-    "name": "Office Block",
-    "provider": "dummy",
-    "enabled": true,
-    "pollInterval": 1000,
-    "connection": {
-      "host": "192.168.1.102"
-    },
-    "providerOptions": {},
     "phaseConfig": {
       "l1": {
         "enabled": true,

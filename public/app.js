@@ -1,7 +1,7 @@
 'use strict';
 
 const byId = (id) => document.getElementById(id);
-const fmt = (value, digits = 2) => Number(value ?? 0).toFixed(digits);
+const fmt = (value, digits = 2) => value == null || !Number.isFinite(Number(value)) ? 'N/A' : Number(value).toFixed(digits);
 const params = new URLSearchParams(window.location.search);
 const selectedDeviceId = params.get('deviceId');
 const PHASES = ['l1', 'l2', 'l3'];
@@ -101,12 +101,14 @@ function setDisabledState() {
   byId('connectionDot').className = 'dot disabled';
   byId('connectionText').textContent = 'DISABLED';
   byId('headerLastUpdate').textContent = 'No live data';
+  if (selectedDevice?.provider === 'energyguard') byId('neutralStatus').textContent = 'Unknown';
 }
 
 function setUnavailableState(device) {
   byId('connectionDot').className = 'dot warn';
   byId('connectionText').textContent = device.status === 'adapter_not_configured' ? 'NOT CONFIGURED' : 'OFFLINE';
   byId('headerLastUpdate').textContent = device.statusMessage || 'No live data';
+  if (device.provider === 'energyguard') byId('neutralStatus').textContent = 'Unknown';
 }
 
 function setPageError(message) {
@@ -146,15 +148,22 @@ function updateLive(data) {
   updateDeviceName(data.deviceId);
   if (data.phaseConfig) applyPhaseConfig(data.phaseConfig);
   const lastUpdate = formatTime(data.ts);
-  byId('neutralStatus').textContent = data.neutralPresent ? 'Present' : 'Missing';
+  const neutral = byId('neutralStatus');
+  if (selectedDevice?.provider === 'energyguard') {
+    neutral.textContent = 'Present';
+    neutral.title = 'Inferred from the operating EnergyGuard L1–N supply; not an independent neutral-integrity measurement';
+  } else {
+    neutral.textContent = data.neutralPresent == null ? 'Unknown' : (data.neutralPresent ? 'Present' : 'Missing');
+    neutral.removeAttribute('title');
+  }
   byId('totalKw').textContent = data.totalPowerKw == null ? 'N/A' : `${fmt(data.totalPowerKw)} kW`;
   byId('lastUpdate').textContent = lastUpdate;
   byId('headerLastUpdate').textContent = `Last update ${lastUpdate}`;
 
   PHASES.forEach((phase) => {
     if (!phaseConfig[phase].enabled || !data[phase]) return;
-    byId(`${phase}v`).textContent = `${fmt(data[phase].voltage, 1)} V`;
-    byId(`${phase}c`).textContent = `${fmt(data[phase].current, 2)} A`;
+    byId(`${phase}v`).textContent = data[phase].voltage == null ? 'N/A' : `${fmt(data[phase].voltage, 1)} V`;
+    byId(`${phase}c`).textContent = data[phase].current == null ? 'N/A' : `${fmt(data[phase].current, 2)} A`;
     byId(`${phase}p`).textContent = data[phase].powerKw == null ? 'N/A' : `${fmt(data[phase].powerKw, 3)} kW`;
   });
 }
@@ -343,7 +352,7 @@ function connectWebSocket() {
     const apiShape = {
       deviceId: reading.deviceId,
       ts: reading.ts,
-      neutralPresent: Boolean(reading.neutralPresent),
+      neutralPresent: reading.neutralPresent,
       totalPowerKw: reading.totalPowerKw,
       l1: reading.l1PowerKw == null ? null : { voltage: reading.l1Voltage, current: reading.l1Current, powerKw: reading.l1PowerKw },
       l2: reading.l2PowerKw == null ? null : { voltage: reading.l2Voltage, current: reading.l2Current, powerKw: reading.l2PowerKw },

@@ -26,18 +26,7 @@ function latest(id) {
 }
 class EnergyGuardProvider extends BaseProvider {
   async read() {
-    const sample = latest(this.deviceConfig.providerOptions?.energyguardDeviceId);
-    if (!sample) { const err = new Error('No recent EnergyGuard broadcast received'); err.code = 'METER_OFFLINE'; throw err; }
-    if (!sample.valid) { const err = new Error('Meter reports invalid measurements'); err.code = 'METER_INVALID'; throw err; }
-    const calibrated = sample.calibrated;
-    const avg = Object.values(sample.voltage).reduce((a,b)=>a+b,0)/3;
-    const amps = Object.values(sample.current).reduce((a,b)=>a+b,0);
-    return { voltage: { ...sample.voltage }, current: { ...sample.current },
-      averageVoltage: avg, totalCurrent: amps,
-      totalPower: ['l1','l2','l3'].reduce((s,p)=>s+sample.voltage[p]*sample.current[p],0)/1000,
-      calibrated,
-      measurementValid: true, source: 'energyguard-udp', sequence: sample.sequence,
-      timestamp: new Date(sample.receivedAt).toISOString() };
+    return require('./energyguardHttp').read(this.deviceConfig);
   }
 }
 module.exports = { EnergyGuardProvider, accept, latest };

@@ -615,13 +615,14 @@ function recordPhaseEvents(deviceId, previousConfig, nextConfig) {
 function getDevicesApi() {
   return deviceManager.getDevices().map((device) => {
     const activePhases = ['l1', 'l2', 'l3'].filter((phase) => device.phaseConfig?.[phase]?.enabled !== false);
-    const voltages = activePhases.map((phase) => Number(device.data?.voltage?.[phase])).filter(Number.isFinite);
-    const currents = activePhases.map((phase) => Number(device.data?.current?.[phase])).filter(Number.isFinite);
-    const averageVoltage = voltages.length ? voltages.reduce((sum, value) => sum + value, 0) / voltages.length : null;
-    const totalCurrent = currents.length ? currents.reduce((sum, value) => sum + value, 0) : null;
-    const totalPower = activePhases.length && activePhases.every(p => Number.isFinite(Number(device.data?.voltage?.[p])) && Number.isFinite(Number(device.data?.current?.[p])))
-      ? activePhases.reduce((sum, p) => sum + Number(device.data.voltage[p]) * Number(device.data.current[p]), 0) / 1000
-      : null;
+    const values = device.data;
+    const voltages = activePhases.map(p => values?.voltage?.[p]).filter(v => typeof v === 'number' && Number.isFinite(v));
+    const currents = activePhases.map(p => values?.current?.[p]).filter(v => typeof v === 'number' && Number.isFinite(v));
+    const averageVoltage = voltages.length ? voltages.reduce((a,b)=>a+b,0)/voltages.length : null;
+    const totalCurrent = currents.length ? currents.reduce((a,b)=>a+b,0) : null;
+    const totalPower = values?.source === 'energyguard-http' ? values.totalPower :
+      (activePhases.length && activePhases.every(p => typeof values?.voltage?.[p] === 'number' && typeof values?.current?.[p] === 'number')
+        ? activePhases.reduce((sum,p)=>sum+values.voltage[p]*values.current[p],0)/1000 : null);
 
     return {
       id: device.id,
@@ -640,6 +641,9 @@ function getDevicesApi() {
       totalCurrent: totalCurrent === null ? null : Number(totalCurrent.toFixed(1)),
       totalPower: totalPower === null ? null : Number(totalPower.toFixed(2)),
       calibrated: device.data?.calibrated ?? null,
+      frequencyHz: device.data?.frequencyHz ?? null,
+      powerFactor: device.data?.powerFactor ?? null,
+      energyWh: device.data?.energyWh ?? null,
       measurementSource: device.data?.source || (device.provider === 'dummy' ? 'simulator' : null),
       lastUpdate: device.data?.timestamp ?? null,
       phaseConfig: device.phaseConfig
@@ -791,8 +795,9 @@ app.get('/api/latest', async (request) => {
   const deviceId = request.query.deviceId || 'uwc-meter-001';
   const device = deviceManager.getDevices().find(d => d.name === deviceId);
   if (device?.provider === 'energyguard') {
+    if (device.status === 'online' && device.data?.source === 'energyguard-http') return energyguardHttpReadingToApi(device, device.data);
     const live = energyguard.latest(device.providerOptions?.energyguardDeviceId);
-    if (live && live.valid) return energyguardReadingToApi(device, live);
+    // UDP V*A is not measured active power; do not present it as live kW in v2.1.
     return latestEnergyguardReading(deviceId);
   }
   return rowToApi(await latestReading(deviceId), deviceId);
@@ -900,6 +905,45 @@ function energyguardReadingToApi(device, sample) {
     phaseConfig: device.phaseConfig, ...phases
   };
 }
+function energyguardHttpReadingToApi(device, data) {
+  const phases = Object.fromEntries(['l1','l2','l3'].map(p => [p, {
+    voltage: data.voltage[p], current: data.current[p], powerKw: data.powerKw[p],
+    reactiveVar: data.phases[p].reactiveVar, apparentVa: data.phases[p].apparentVa,
+    powerFactor: data.phases[p].powerFactor, frequencyHz: data.phases[p].frequencyHz,
+    energy: data.phases[p].energy
+  }]));
+  return { deviceId: device.name, ts: Date.parse(data.timestamp), neutralPresent: true,
+    calibrated: false, valid: data.measurementValid, source: 'energyguard-http',
+    frequencyHz: data.frequencyHz, powerFactor: data.powerFactor, energyWh: data.energyWh,
+    energyPersistenceOk: data.energyPersistenceOk,
+    totalPowerKw: data.totalPower, phaseConfig: device.phaseConfig, ...phases };
+}
+// Poll-based recording uses actual ADE9000 active power, never voltage * current.
+// Only valid phases enter the existing NOT NULL SQLite phase history tables.
+deviceManager.onReading((device, data) => {
+  measurementQueue = measurementQueue.then(async () => {
+    const reading = energyguardHttpReadingToApi(device, data);
+    const phases = ['l1','l2','l3'].filter(p => device.phaseConfig?.[p]?.enabled !== false &&
+      Number.isFinite(data.voltage[p]) && Number.isFinite(data.current[p]) && Number.isFinite(data.powerKw[p]));
+    if (!phases.length) return;
+    const ts = reading.ts;
+    await enqueueDbWrite(async () => {
+      await runDb(`INSERT OR IGNORE INTO energyguard_measurements
+        (device_id, ts, meter_id, sequence, valid, calibrated, frequency_hz, power_factor, total_power_kw,
+         l1_voltage,l1_current,l1_power_kw,l2_voltage,l2_current,l2_power_kw,l3_voltage,l3_current,l3_power_kw)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [device.name,ts,data.meterId,data.sequence ?? null,1,0,
+        data.frequencyHz,data.powerFactor,data.totalPower,
+        ...['l1','l2','l3'].flatMap(p=>[data.voltage[p],data.current[p],data.powerKw[p]])]);
+    });
+    await insertReading({deviceId:device.name,ts,neutralPresent:1,frequencyHz:data.frequencyHz,
+      powerFactor:data.powerFactor,totalPowerKw:phases.reduce((a,p)=>a+data.powerKw[p],0),
+      phases:Object.fromEntries(['l1','l2','l3'].map(p=>[p,phases.includes(p)
+        ? {enabled:true,voltage:data.voltage[p],current:data.current[p],powerKw:data.powerKw[p]}
+        : {enabled:false}]))});
+    recordedSamples++; lastRecordedAt = ts;
+    broadcast({type:'reading',data:reading});
+  }).catch(err => {recordingFailures++;app.log.error({err},'EnergyGuard HTTP recording failed');});
+});
 // Record broadcasts as they arrive, independently of HTTP requests and browsers.
 // Serialize processing so each accepted UDP sample reaches SQLite in order.
 let measurementQueue = Promise.resolve();
@@ -911,6 +955,8 @@ async function recordEnergyguardSample(sample) {
     if (device.provider !== 'energyguard' || !device.enabled ||
         String(device.providerOptions?.energyguardDeviceId || '').toUpperCase() !== sample.id) continue;
     if (!sample.valid) continue;
+    // v2.1: HTTP polling records measured active power instead of assumed PF=1 UDP history.
+    continue;
     const api = energyguardReadingToApi(device, sample);
     try {
       const result = await enqueueDbWrite(() => runDb(`INSERT OR IGNORE INTO energyguard_measurements (
@@ -947,7 +993,7 @@ discovery.onMeasurement(sample => {
     .catch(err => { recordingFailures++; app.log.error({ err }, 'EnergyGuard background recording failed'); });
 });
 app.get('/api/recording-status', async () => ({
-  status: 'running', source: 'energyguard-udp',
+  status: 'running', source: 'energyguard-http',
   recordedSamples, recordingFailures, lastRecordedAt,
   browserRequired: false
 }));
