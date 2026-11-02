@@ -121,3 +121,10 @@ Per-phase displayed Power (kW) = measured RMS voltage × measured RMS current / 
 ### Background recording (v1.9.3)
 
 With `npm start` or `Run Service.bat` running, the server records valid UDP announcements from registered, enabled EnergyGuard meters even if every browser window is closed. Open `/api/recording-status` to see the number of processed historical samples, write failures and last successful record timestamp since server startup. Stopping the PowerShell window stops the server and recording.
+
+
+## v2.1.2 C4D history synchronization
+
+While an EnergyGuard is online, the service retrieves its C4D RAM history every 15 seconds and backfills missed power/current samples in SQLite. The source of truth for live voltage is unchanged. View `/api/energyguard/sync-status` for recovery counts, errors and overruns. Recovered records are kept in `egm_sync_samples` because the C4D history API does not contain voltage magnitudes. Cursor state is persisted in `egm_sync_state` and rollover/reboot events are recorded in `egm_sync_events`. Do not erase or replace your SQLite database during upgrades.
+
+Recovered timestamps are estimated from EGM uptime and the latest sequence at the time of first synchronization; they are not yet UTC-accurate. A reboot of the EGM itself clears its RAM buffer. This feature is for monitoring, not billing-grade reconciliation.
