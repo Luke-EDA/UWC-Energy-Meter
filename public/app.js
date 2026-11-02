@@ -170,7 +170,22 @@ function updateLive(data) {
     if (!phaseConfig[phase].enabled) return;
     byId(`${phase}v`).textContent = data[phase]?.voltage == null ? 'N/A' : `${fmt(data[phase]?.voltage, 1)} V`;
     byId(`${phase}c`).textContent = data[phase]?.current == null ? 'N/A' : `${fmt(data[phase]?.current, 2)} A`;
-    byId(`${phase}p`).textContent = data[phase]?.powerKw == null ? 'N/A' : `${fmt(data[phase]?.powerKw, 3)} kW`;
+    const reading = data[phase] || {};
+    const hasVoltage = reading.voltage != null;
+    const hasCurrent = reading.current != null;
+    // The EnergyGuard below-threshold convention applies to current and power,
+    // not to power factor or phase angle, which remain undefined at no load.
+    const provisionalZero = selectedDevice?.provider === 'energyguard' &&
+      hasVoltage && reading.currentMeasurementState === 'below_threshold_or_absent';
+    const actualWatts = reading.activePowerW ?? (reading.powerKw == null ? null : reading.powerKw * 1000);
+    const apparentVa = reading.apparentVa ?? (provisionalZero ? 0 :
+      (selectedDevice?.provider !== 'energyguard' && hasVoltage && hasCurrent
+        ? reading.voltage * reading.current : null));
+    byId(`${phase}apparent`).textContent = apparentVa == null ? 'N/A' : `${fmt(apparentVa, 2)} VA`;
+    byId(`${phase}p`).textContent = actualWatts == null ? 'N/A' : `${fmt(actualWatts, 2)} W`;
+    byId(`${phase}pf`).textContent = reading.powerFactor == null ? 'N/A' : fmt(reading.powerFactor, 4);
+    // Preserve the meter's native 0–360 degree angle convention.
+    byId(`${phase}angle`).textContent = reading.phaseAngleDeg == null ? 'N/A' : `${fmt(reading.phaseAngleDeg, 2)}°`;
   });
 }
 

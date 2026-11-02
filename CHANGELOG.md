@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.1.4 — Expanded per-phase electrical measurements & remove default dummy devices
+- Fresh installations now start with an empty device list instead of three automatically configured dummy devices. Dummy providers remain available through Add Device. Existing installations must retain their local `src/config/devices.json` to preserve configured devices.
+- Display voltage, current, apparent power (VA), actual/active power (W), power factor, and voltage-current phase angle (degrees) in each phase card.
+- Use EnergyGuard instantaneous API fields directly; preserve native 0–360° angle values.
+- Keep power factor and phase angle N/A when the meter does not report valid values, including below-threshold current.
+- Preserve provisional zero current/power, unavailable-phase handling, five-second HTTP refresh, and C4D synchronization.
+- Dummy-device apparent power uses V × A; actual power retains its legacy estimate, with PF and phase angle N/A.
+- Meter accuracy remains provisional and uncalibrated.
+
 ## v2.1.3 — Live device-details phase-card refresh
 - Refresh enabled device-details L1/L2/L3 voltage, current and power cards from `/api/latest` every five seconds without reloading the page.
 - Prevent overlapping HTTP refresh requests; EnergyGuard phase cards now ignore legacy WebSocket readings to avoid alternating valid values and N/A. Dummy devices retain WebSocket updates.
@@ -7,7 +16,7 @@
 - Keep existing history chart refresh and selected range independent of the live-card refresh.
 - Preserve the verified C4D history pagination workaround (20 records per request) in both the caller and default.
 
-## v2.1.2 — C4D buffered history synchronization
+## v2.1.2 — C4D buffered history synchronization 
 - Added incremental synchronization of ESP32 C4D buffered history to SQLite, with cursor tracking, boot identifiers, and duplicate protection.
 - Added synchronization diagnostics endpoint `/api/energyguard/sync-status`.
 - Verified successful history recovery and historical graph display after Node.js service downtime.
@@ -19,7 +28,7 @@
 - Keep unavailable/disabled phases as N/A and preserve gaps on communication failure.
 - Preserve neutral status behavior from v2.1.0.
 
-## v2.1.0 — EnergyGuard HTTP integration
+## v2.1.0 — EnergyGuard HTTP integration 
 - Integrated live EnergyGuard HTTP measurements into dashboard and device details.
 - Preserved dummy devices and existing history pipeline.
 
@@ -131,6 +140,14 @@
 - Updated application version and build metadata to 1.5.8.2.
 
 # Changelog
+
+## v2.1.4 — Expanded per-phase electrical measurements (testing)
+- Display voltage, current, apparent power (VA), actual/active power (W), power factor, and voltage-current phase angle (degrees) in each phase card.
+- Use EnergyGuard instantaneous API fields directly; preserve native 0–360° angle values.
+- Keep power factor and phase angle N/A when the meter does not report valid values, including below-threshold current.
+- Preserve provisional zero current/power, unavailable-phase handling, five-second HTTP refresh, and C4D synchronization.
+- Dummy-device apparent power uses V × A; actual power retains its legacy estimate, with PF and phase angle N/A.
+- Meter accuracy remains provisional and uncalibrated.
 
 ## 1.5.8 - Energy Usage & Cost Summary
 

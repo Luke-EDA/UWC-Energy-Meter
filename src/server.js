@@ -955,6 +955,7 @@ function energyguardHttpReadingToApi(device, data) {
   const phases = Object.fromEntries(['l1','l2','l3'].map(p => [p, {
     voltage: data.voltage[p], current: data.current[p], powerKw: data.powerKw[p],
     reactiveVar: data.phases[p].reactiveVar, apparentVa: data.phases[p].apparentVa,
+    activePowerW: data.phases[p].activePowerW, phaseAngleDeg: data.phases[p].phaseAngleDeg,
     powerFactor: data.phases[p].powerFactor, frequencyHz: data.phases[p].frequencyHz,
     energy: data.phases[p].energy,
     currentMeasurementState: data.phases[p].currentMeasurementState,

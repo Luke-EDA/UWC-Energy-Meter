@@ -49,6 +49,7 @@ async function read(device) {
     powerKw[phase] = w === null ? null : w / 1000;
     phaseDetails[phase] = { voltage: v, current: a, powerKw: powerKw[phase],
       reactiveVar: number(inst.reactive_power_var), apparentVa: number(inst.apparent_power_va),
+      activePowerW: w, phaseAngleDeg: number(inst.angle_vi_deg),
       powerFactor: number(inst.power_factor), frequencyHz: number(inst.frequency_hz),
       energy: energy.phases?.[phase] || null,
       currentMeasurementState: inst.current_measurement_state || null,
