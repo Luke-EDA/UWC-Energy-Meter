@@ -1,6 +1,6 @@
 {
   "name": "uwc-energy-monitor",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "Protocol-agnostic multi-device energy dashboard with reporting exports and LAN deployment diagnostics.",
   "main": "src/server.js",
   "scripts": {
@@ -18,5 +18,5 @@
   "engines": {
     "node": ">=20"
   },
-  "buildName": "EnergyGuard C4D Buffered History Synchronization"
+  "buildName": "Live Device Details Phase Refresh"
 }

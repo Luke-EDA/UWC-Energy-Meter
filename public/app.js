@@ -13,6 +13,9 @@ let pendingPhaseConfig = null;
 let currentHistoryRange = '24h';
 let currentHistoryRows = [];
 let historyRefreshTimer = null;
+let liveRefreshTimer = null;
+let liveRefreshBusy = false;
+let lastLiveTimestamp = 0;
 let currentEnergySummaryRange = 'current-month';
 let energySummaryRefreshTimer = null;
 
@@ -145,6 +148,9 @@ function updateChartLabels() {
 
 function updateLive(data) {
   if (!data) return;
+  const incomingTime = Date.parse(data.ts);
+  if (Number.isFinite(incomingTime) && incomingTime < lastLiveTimestamp) return;
+  if (Number.isFinite(incomingTime)) lastLiveTimestamp = incomingTime;
   updateDeviceName(data.deviceId);
   if (data.phaseConfig) applyPhaseConfig(data.phaseConfig);
   const lastUpdate = formatTime(data.ts);
@@ -161,10 +167,10 @@ function updateLive(data) {
   byId('headerLastUpdate').textContent = `Last update ${lastUpdate}`;
 
   PHASES.forEach((phase) => {
-    if (!phaseConfig[phase].enabled || !data[phase]) return;
-    byId(`${phase}v`).textContent = data[phase].voltage == null ? 'N/A' : `${fmt(data[phase].voltage, 1)} V`;
-    byId(`${phase}c`).textContent = data[phase].current == null ? 'N/A' : `${fmt(data[phase].current, 2)} A`;
-    byId(`${phase}p`).textContent = data[phase].powerKw == null ? 'N/A' : `${fmt(data[phase].powerKw, 3)} kW`;
+    if (!phaseConfig[phase].enabled) return;
+    byId(`${phase}v`).textContent = data[phase]?.voltage == null ? 'N/A' : `${fmt(data[phase]?.voltage, 1)} V`;
+    byId(`${phase}c`).textContent = data[phase]?.current == null ? 'N/A' : `${fmt(data[phase]?.current, 2)} A`;
+    byId(`${phase}p`).textContent = data[phase]?.powerKw == null ? 'N/A' : `${fmt(data[phase]?.powerKw, 3)} kW`;
   });
 }
 
@@ -330,6 +336,28 @@ function bindHistoryRange() {
   historyRefreshTimer = window.setInterval(() => loadHistory(currentHistoryRange, true), 5000);
 }
 
+// Refresh the device cards from the live HTTP-backed endpoint, independently of
+// history graph polling and WebSocket broadcasts. Avoid overlapping requests.
+async function refreshLiveCards() {
+  if (liveRefreshBusy || !selectedDevice || selectedDevice.enabled === false) return;
+  liveRefreshBusy = true;
+  try {
+    const latest = await getJson(apiUrl('/api/latest'));
+    if (latest) updateLive(latest);
+    // Do not claim a live connection based solely on a cached last reading.
+  } catch (error) {
+    console.warn('Live phase-card refresh failed:', error);
+  } finally {
+    liveRefreshBusy = false;
+  }
+}
+
+function startLiveCardRefresh() {
+  if (liveRefreshTimer) window.clearInterval(liveRefreshTimer);
+  refreshLiveCards();
+  liveRefreshTimer = window.setInterval(refreshLiveCards, 5000);
+}
+
 function websocketUrl() {
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   return `${protocol}://${location.host}/ws`;
@@ -347,6 +375,10 @@ function connectWebSocket() {
       return;
     }
     if (message.type !== 'reading') return;
+    // EnergyGuard phase cards use the canonical HTTP measurement shape.
+    // Legacy WebSocket broadcasts can contain missing fields and must not
+    // replace valid HTTP values with N/A between polling cycles.
+    if (selectedDevice?.provider === 'energyguard') return;
     const reading = message.data;
     if (selectedDeviceId && reading.deviceId !== selectedDeviceId) return;
     const apiShape = {
@@ -354,9 +386,9 @@ function connectWebSocket() {
       ts: reading.ts,
       neutralPresent: reading.neutralPresent,
       totalPowerKw: reading.totalPowerKw,
-      l1: reading.l1PowerKw == null ? null : { voltage: reading.l1Voltage, current: reading.l1Current, powerKw: reading.l1PowerKw },
-      l2: reading.l2PowerKw == null ? null : { voltage: reading.l2Voltage, current: reading.l2Current, powerKw: reading.l2PowerKw },
-      l3: reading.l3PowerKw == null ? null : { voltage: reading.l3Voltage, current: reading.l3Current, powerKw: reading.l3PowerKw }
+      l1: { voltage: reading.l1Voltage, current: reading.l1Current, powerKw: reading.l1PowerKw },
+      l2: { voltage: reading.l2Voltage, current: reading.l2Current, powerKw: reading.l2PowerKw },
+      l3: { voltage: reading.l3Voltage, current: reading.l3Current, powerKw: reading.l3PowerKw }
     };
     updateLive(apiShape);
   };
@@ -453,6 +485,8 @@ async function initialise() {
   const latest = await getJson(apiUrl('/api/latest'));
   await loadHistory('24h');
   await loadDeviceEnergySummary('current-month');
+
+  if (selectedDevice.enabled !== false) startLiveCardRefresh();
 
   if (selectedDevice.enabled === false) {
     setDisabledState();
