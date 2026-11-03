@@ -19,6 +19,7 @@ const { WebSocketServer } = require('ws');
 const deviceManager = require('./services/deviceManager');
 const discovery = require('./services/energyguardDiscovery');
 const exportService = require('./exportService');
+const historySync = require('./services/historySync');
 
 const DEFAULT_PORT = 3000;
 const HOST = String(process.env.HOST || '0.0.0.0').trim();
@@ -146,6 +147,23 @@ db.serialize(() => {
     UNIQUE(meter_id, ts)
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_energyguard_measurements_device_ts ON energyguard_measurements(device_id, ts)');
+  // C4D backfill is separate: firmware history does not include voltage magnitude.
+  // Cursor, boot anchor and samples are committed atomically for crash safety.
+  db.run(`CREATE TABLE IF NOT EXISTS egm_sync_state (
+    device_id TEXT PRIMARY KEY, boot_id TEXT NOT NULL, last_seq INTEGER NOT NULL,
+    boot_epoch_ms INTEGER NOT NULL, last_sync_ms INTEGER NOT NULL
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS egm_sync_samples (
+    device_id TEXT NOT NULL, boot_id TEXT NOT NULL, seq INTEGER NOT NULL,
+    ts INTEGER NOT NULL, phase TEXT NOT NULL CHECK (phase IN ('l1','l2','l3')),
+    current REAL NOT NULL, power_kw REAL NOT NULL, quality TEXT NOT NULL,
+    PRIMARY KEY(device_id, boot_id, seq, phase)
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_egm_sync_samples_device_ts ON egm_sync_samples(device_id, ts)');
+  db.run(`CREATE TABLE IF NOT EXISTS egm_sync_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT NOT NULL, ts INTEGER NOT NULL,
+    kind TEXT NOT NULL, details TEXT NOT NULL
+  )`);
   db.run(`CREATE TABLE IF NOT EXISTS phase_config_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     device_id TEXT NOT NULL,
@@ -371,10 +389,18 @@ function history(deviceId, rangeValue = '24h') {
     db.all(`SELECT CAST(ts / ? AS INTEGER) * ? AS ts,
                    phase,
                    AVG(power_kw) AS power_kw
-            FROM phase_readings
-            WHERE device_id = ? AND ts >= ?
+            FROM (
+              SELECT ts, phase, power_kw FROM phase_readings WHERE device_id = ? AND ts >= ?
+              UNION ALL
+              SELECT s.ts, s.phase, s.power_kw FROM egm_sync_samples s
+              WHERE s.device_id = ? AND s.ts >= ?
+                AND NOT EXISTS (SELECT 1 FROM phase_readings p
+                  WHERE p.device_id = s.device_id AND p.phase = s.phase
+                  AND p.ts >= CAST(s.ts / 10000 AS INTEGER) * 10000
+                  AND p.ts < CAST(s.ts / 10000 AS INTEGER) * 10000 + 10000)
+            )
             GROUP BY CAST(ts / ? AS INTEGER), phase
-            ORDER BY ts ASC`, [range.bucketMs, range.bucketMs, deviceId, since, range.bucketMs], (err, phaseRows) => {
+            ORDER BY ts ASC`, [range.bucketMs, range.bucketMs, deviceId, since, deviceId, since, range.bucketMs], (err, phaseRows) => {
       if (err) return reject(err);
       db.all(`SELECT phase, enabled, ts FROM phase_config_events
               WHERE device_id = ? AND ts >= ? ORDER BY ts ASC`, [deviceId, since], (eventErr, events) => {
@@ -501,11 +527,23 @@ async function getEnergyCostSummary(rangeValue = 'current-month', deviceId = nul
     db.all(`SELECT CAST(ts / ? AS INTEGER) * ? AS ts,
                    device_id,
                    AVG(total_power_kw) AS total_power_kw
-            FROM meter_snapshots
-            WHERE ts >= ? AND ts <= ?${deviceFilter}
+            FROM (
+              SELECT ts, device_id, total_power_kw FROM meter_snapshots
+              WHERE ts >= ? AND ts <= ?${deviceFilter}
+              UNION ALL
+              SELECT s.ts, s.device_id, SUM(s.power_kw) AS total_power_kw
+              FROM egm_sync_samples s
+              WHERE s.ts >= ? AND s.ts <= ?${deviceFilter}
+                AND NOT EXISTS (SELECT 1 FROM meter_snapshots m
+                  WHERE m.device_id = s.device_id
+                    AND m.ts >= CAST(s.ts / 10000 AS INTEGER) * 10000
+                    AND m.ts < CAST(s.ts / 10000 AS INTEGER) * 10000 + 10000)
+              GROUP BY s.device_id, s.boot_id, s.seq, s.ts
+            )
             GROUP BY CAST(ts / ? AS INTEGER), device_id
             ORDER BY device_id, ts ASC`,
-      parameters,
+      [bucketMs, bucketMs, queryStart, queryEnd, ...(deviceId ? [deviceId] : []),
+        queryStart, queryEnd, ...(deviceId ? [deviceId] : []), bucketMs],
       (error, result) => error ? reject(error) : resolve(result));
   });
 
@@ -549,8 +587,16 @@ function energySummary(deviceId = 'uwc-meter-001') {
 
   return Promise.all(periods.map((period) => new Promise((resolve, reject) => {
     const since = Date.now() - period.hours * 60 * 60 * 1000;
-    db.all(`SELECT ts, phase, power_kw FROM phase_readings
-            WHERE device_id = ? AND ts >= ? ORDER BY phase, ts ASC`, [deviceId, since], (err, rows) => {
+    db.all(`SELECT ts, phase, power_kw            FROM (
+              SELECT ts, phase, power_kw FROM phase_readings WHERE device_id = ? AND ts >= ?
+              UNION ALL
+              SELECT s.ts, s.phase, s.power_kw FROM egm_sync_samples s
+              WHERE s.device_id = ? AND s.ts >= ?
+                AND NOT EXISTS (SELECT 1 FROM phase_readings p
+                  WHERE p.device_id = s.device_id AND p.phase = s.phase
+                  AND p.ts >= CAST(s.ts / 10000 AS INTEGER) * 10000
+                  AND p.ts < CAST(s.ts / 10000 AS INTEGER) * 10000 + 10000)
+            ) ORDER BY phase, ts ASC`, [deviceId, since, deviceId, since], (err, rows) => {
       if (err) return reject(err);
       const grouped = { l1: [], l2: [], l3: [] };
       rows.forEach((row) => grouped[row.phase].push(row));
@@ -909,8 +955,11 @@ function energyguardHttpReadingToApi(device, data) {
   const phases = Object.fromEntries(['l1','l2','l3'].map(p => [p, {
     voltage: data.voltage[p], current: data.current[p], powerKw: data.powerKw[p],
     reactiveVar: data.phases[p].reactiveVar, apparentVa: data.phases[p].apparentVa,
+    activePowerW: data.phases[p].activePowerW, phaseAngleDeg: data.phases[p].phaseAngleDeg,
     powerFactor: data.phases[p].powerFactor, frequencyHz: data.phases[p].frequencyHz,
-    energy: data.phases[p].energy
+    energy: data.phases[p].energy,
+    currentMeasurementState: data.phases[p].currentMeasurementState,
+    zeroSubstituted: data.phases[p].zeroSubstituted
   }]));
   return { deviceId: device.name, ts: Date.parse(data.timestamp), neutralPresent: true,
     calibrated: false, valid: data.measurementValid, source: 'energyguard-http',
@@ -918,8 +967,10 @@ function energyguardHttpReadingToApi(device, data) {
     energyPersistenceOk: data.energyPersistenceOk,
     totalPowerKw: data.totalPower, phaseConfig: device.phaseConfig, ...phases };
 }
-// Poll-based recording uses actual ADE9000 active power, never voltage * current.
-// Only valid phases enter the existing NOT NULL SQLite phase history tables.
+// Poll-based recording uses ADE9000 active power, never voltage * current.
+// Online enabled phases with valid voltage and below-threshold current are
+// recorded as provisional zero; disabled/unavailable phases remain absent.
+// Communication failures never create zero readings.
 deviceManager.onReading((device, data) => {
   measurementQueue = measurementQueue.then(async () => {
     const reading = energyguardHttpReadingToApi(device, data);
@@ -933,7 +984,13 @@ deviceManager.onReading((device, data) => {
          l1_voltage,l1_current,l1_power_kw,l2_voltage,l2_current,l2_power_kw,l3_voltage,l3_current,l3_power_kw)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [device.name,ts,data.meterId,data.sequence ?? null,1,0,
         data.frequencyHz,data.powerFactor,data.totalPower,
-        ...['l1','l2','l3'].flatMap(p=>[data.voltage[p],data.current[p],data.powerKw[p]])]);
+        // Legacy raw table requires non-null voltage/current. Use placeholders
+        // only there; phase_readings rows indicate which phases were available.
+        ...['l1','l2','l3'].flatMap(p=>[
+          Number.isFinite(data.voltage[p]) ? data.voltage[p] : 0,
+          Number.isFinite(data.current[p]) ? data.current[p] : 0,
+          data.powerKw[p]
+        ])]);
     });
     await insertReading({deviceId:device.name,ts,neutralPresent:1,frequencyHz:data.frequencyHz,
       powerFactor:data.powerFactor,totalPowerKw:phases.reduce((a,p)=>a+data.powerKw[p],0),
@@ -992,6 +1049,91 @@ discovery.onMeasurement(sample => {
   measurementQueue = measurementQueue.then(() => recordEnergyguardSample(sample))
     .catch(err => { recordingFailures++; app.log.error({ err }, 'EnergyGuard background recording failed'); });
 });
+// Sync one EGM at a time. Cursor updates and samples are one SQLite transaction.
+let syncBusy = false;
+const syncMetrics = { recovered: 0, overruns: 0, failures: 0, lastSync: null };
+async function syncEnergyguardDevice(device) {
+  const host = device.data?.host || device.connection?.host;
+  const port = Number(device.data?.port || device.providerOptions?.energyguardPort || 80);
+  if (!host || !device.data || device.status !== 'online' || device.data.source !== 'energyguard-http') return;
+  const getRow = (sql, args) => new Promise((resolve, reject) =>
+    db.get(sql, args, (err, row) => err ? reject(err) : resolve(row)));
+  const prior = await getRow('SELECT * FROM egm_sync_state WHERE device_id = ?', [device.name]);
+  // Fetch the newest page first on fresh installation: the EGM only has RAM history.
+  // Once a cursor exists, retrieve every missing page in sequence.
+  let seq = prior ? prior.last_seq : 0;
+  let state = prior;
+  for (let pageNumber = 0; pageNumber < 8; pageNumber++) {
+    const page = await historySync.fetchPage(host, port, seq, 20);
+    const bootId = String(page.boot_id);
+    const newBoot = !state || state.boot_id !== bootId;
+    if (newBoot) {
+      seq = 0;
+      if (state) {
+        await enqueueDbWrite(() => runDb('INSERT INTO egm_sync_events (device_id,ts,kind,details) VALUES (?,?,?,?)',
+          [device.name, Date.now(), 'reboot', `boot ${state.boot_id} -> ${bootId}`]));
+      }
+      // A new boot starts a new sequence space: always restart at zero.
+      if (state && state.boot_id !== bootId) {
+        state = null;
+        continue;
+      }
+    }
+    const records = page.records.map(r => historySync.normalize(r, device));
+    // Use the LATEST sequence, not the last item of a paginated response.
+    // Otherwise a 100-record page from a long backlog would be incorrectly
+    // anchored to the present and later pages would appear in the future.
+    // This remains an estimate until firmware provides absolute timestamps.
+    const bootEpoch = newBoot ? Date.now() - page.latest_seq * page.interval_ms
+      : state.boot_epoch_ms;
+    if (page.cursor_overrun) syncMetrics.overruns++;
+    const nextSeq = page.next_since_seq;
+    if (nextSeq < seq || (page.has_more && nextSeq === seq)) throw new Error('C4D cursor did not advance');
+    await enqueueDbWrite(async () => {
+      await runDb('BEGIN IMMEDIATE TRANSACTION');
+      try {
+        if (page.cursor_overrun) await runDb(
+          'INSERT INTO egm_sync_events (device_id,ts,kind,details) VALUES (?,?,?,?)',
+          [device.name, Date.now(), 'overrun', `requested ${seq}; oldest ${page.oldest_seq}`]);
+        for (const record of records) {
+          const ts = bootEpoch + record.uptimeMs;
+          if (ts > Date.now() + 10000 || ts < 0) throw new Error('Invalid recovered timestamp');
+          for (const [phase, value] of Object.entries(record.phases)) {
+            if (!value.available) continue;
+            const result = await runDb(`INSERT OR IGNORE INTO egm_sync_samples
+              (device_id,boot_id,seq,ts,phase,current,power_kw,quality)
+              VALUES (?,?,?,?,?,?,?,?)`, [device.name, bootId, record.seq, ts, phase,
+                value.current, value.powerKw, value.quality]);
+            syncMetrics.recovered += result.changes;
+          }
+        }
+        await runDb(`INSERT INTO egm_sync_state (device_id,boot_id,last_seq,boot_epoch_ms,last_sync_ms)
+          VALUES (?,?,?,?,?) ON CONFLICT(device_id) DO UPDATE SET
+          boot_id=excluded.boot_id,last_seq=excluded.last_seq,
+          boot_epoch_ms=excluded.boot_epoch_ms,last_sync_ms=excluded.last_sync_ms`,
+          [device.name, bootId, nextSeq, bootEpoch, Date.now()]);
+        await runDb('COMMIT');
+      } catch (error) { await runDb('ROLLBACK'); throw error; }
+    });
+    seq = nextSeq;
+    state = { boot_id: bootId, last_seq: seq, boot_epoch_ms: bootEpoch };
+    syncMetrics.lastSync = Date.now();
+    if (!page.has_more) break;
+  }
+}
+async function syncAllEnergyguards() {
+  if (syncBusy) return;
+  syncBusy = true;
+  try {
+    for (const device of deviceManager.getDevices()) {
+      if (device.provider !== 'energyguard' || !device.enabled) continue;
+      try { await syncEnergyguardDevice(device); }
+      catch (err) { syncMetrics.failures++; app.log.warn({ err, device: device.name }, 'C4D history sync failed'); }
+    }
+  } finally { syncBusy = false; }
+}
+setInterval(() => { syncAllEnergyguards().catch(err => app.log.error({err}, 'History sync scheduler failed')); }, 15000);
+app.get('/api/energyguard/sync-status', async () => ({ ...syncMetrics, inProgress: syncBusy }));
 app.get('/api/recording-status', async () => ({
   status: 'running', source: 'energyguard-http',
   recordedSamples, recordingFailures, lastRecordedAt,
