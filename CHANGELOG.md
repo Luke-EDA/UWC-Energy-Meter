@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.2.0 Stable Release
+- Promoted the EnergyGuard integration development series to the main branch.
+- Added expanded per-phase electrical measurements, including voltage,
+  current, apparent power, active power, power factor and phase angle.
+- Added EnergyGuard buffered history synchronization and recovery.
+- Improved live measurement refresh and zero-current handling.
+- Updated fresh-install configuration to support an empty device list.
+- Retained manually configurable dummy devices for testing.
+- Preserved configurable estimated electricity cost calculations.
+
+### Hardware Validation
+- Investigated CT current under-reading with a reference clamp meter.
+- Identified external CT burden loading as the likely primary cause.
+- Verified improved current readings after removing the external burden.
+- Hardware input biasing and protection review remains outstanding.
+
 ## v2.1.4 — Expanded per-phase electrical measurements & remove default dummy devices
 - Fresh installations now start with an empty device list instead of three automatically configured dummy devices. Dummy providers remain available through Add Device. Existing installations must retain their local `src/config/devices.json` to preserve configured devices.
 - Display voltage, current, apparent power (VA), actual/active power (W), power factor, and voltage-current phase angle (degrees) in each phase card.
