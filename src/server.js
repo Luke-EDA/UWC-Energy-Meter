@@ -423,27 +423,16 @@ function history(deviceId, rangeValue = '24h') {
 
 function totalPowerHistory(rangeValue = '24h') {
   const range = resolveHistoryRange(rangeValue);
-  const since = Date.now() - range.durationMs;
-
+  const endMs = Date.now();
+  const since = endMs - range.durationMs;
+  const { siteHistorySql, siteHistoryParams } = require('./services/siteHistoryQuery');
   return new Promise((resolve, reject) => {
-    db.all(`WITH device_buckets AS (
-              SELECT CAST(ts / ? AS INTEGER) AS time_bucket,
-                     device_id,
-                     AVG(total_power_kw) AS device_power_kw
-              FROM meter_snapshots
-              WHERE ts >= ?
-              GROUP BY CAST(ts / ? AS INTEGER), device_id
-            )
-            SELECT time_bucket * ? AS ts,
-                   SUM(device_power_kw) AS total_power_kw
-            FROM device_buckets
-            GROUP BY time_bucket
-            ORDER BY time_bucket ASC`, [range.bucketMs, since, range.bucketMs, range.bucketMs], (err, rows) => {
-      if (err) reject(err); else resolve({ range: range.key, bucketMs: range.bucketMs, rows });
+    db.all(siteHistorySql, siteHistoryParams(range.bucketMs, since, endMs), (err, rows) => {
+      if (err) reject(err);
+      else resolve({ range: range.key, bucketMs: range.bucketMs, rows });
     });
   });
 }
-
 
 const ENERGY_SUMMARY_RANGES = Object.freeze({
   'current-month': 'Current Month',

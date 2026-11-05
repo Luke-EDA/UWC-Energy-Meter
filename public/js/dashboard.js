@@ -515,6 +515,16 @@ function fullHistoryTimestamp(timestamp) {
   });
 }
 
+function historyAxisMaximum(values) {
+  const maximum = Math.max(0, ...values.filter((value) => Number.isFinite(value)).map(Number));
+  if (maximum <= 0) return 1;
+  const roughStep = maximum / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalized = roughStep / magnitude;
+  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+  return Math.ceil(maximum / step) * step;
+}
+
 function buildTotalPowerHistoryChart(rows) {
   const colours = chartThemeColours();
   currentTotalPowerRows = rows;
@@ -524,6 +534,7 @@ function buildTotalPowerHistoryChart(rows) {
   if (totalPowerHistoryChart) {
     totalPowerHistoryChart.data.labels = labels;
     totalPowerHistoryChart.data.datasets[0].data = data;
+    totalPowerHistoryChart.options.scales.y.max = historyAxisMaximum(data);
     totalPowerHistoryChart.update('none');
     return;
   }
@@ -538,7 +549,7 @@ function buildTotalPowerHistoryChart(rows) {
         borderColor: colours.primary,
         backgroundColor: `${colours.primary}22`,
         fill: true,
-        tension: 0.25,
+        tension: 0,
         pointRadius: 0,
         pointHoverRadius: 4,
         borderWidth: 2
@@ -565,7 +576,9 @@ function buildTotalPowerHistoryChart(rows) {
         },
         y: {
           beginAtZero: true,
-          ticks: { color: colours.muted },
+          min: 0,
+          max: historyAxisMaximum(data),
+          ticks: { color: colours.muted, count: 5 },
           grid: { color: colours.border },
           title: { display: true, text: 'Power (kW)', color: colours.text }
         }

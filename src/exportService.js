@@ -4,10 +4,10 @@ const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
 
 const EXPORT_RANGES = Object.freeze({
-  'last-week': { label: 'Last Week', durationMs: 7 * 24 * 60 * 60 * 1000, bucketMs: 60 * 60 * 1000, resolution: 'Hourly averages' },
-  'last-month': { label: 'Last Month', durationMs: 30 * 24 * 60 * 60 * 1000, bucketMs: 24 * 60 * 60 * 1000, resolution: 'Daily averages' },
-  'last-6-months': { label: 'Last 6 Months', durationMs: 182 * 24 * 60 * 60 * 1000, bucketMs: 7 * 24 * 60 * 60 * 1000, resolution: 'Weekly averages' },
-  'last-year': { label: 'Last Year', durationMs: 365 * 24 * 60 * 60 * 1000, bucketMs: 7 * 24 * 60 * 60 * 1000, resolution: 'Weekly averages' }
+  'last-week': { label: 'Last Week', durationMs: 7 * 24 * 60 * 60 * 1000, bucketMs: 15 * 60 * 1000, resolution: '15-minute averages' },
+  'last-month': { label: 'Last Month', durationMs: 30 * 24 * 60 * 60 * 1000, bucketMs: 60 * 60 * 1000, resolution: 'Hourly averages' },
+  'last-6-months': { label: 'Last 6 Months', durationMs: 182 * 24 * 60 * 60 * 1000, bucketMs: 24 * 60 * 60 * 1000, resolution: 'Daily averages' },
+  'last-year': { label: 'Last Year', durationMs: 365 * 24 * 60 * 60 * 1000, bucketMs: 24 * 60 * 60 * 1000, resolution: 'Daily averages' }
 });
 
 const PHASE_COLOURS = { l1: '#D32F2F', l2: '#D4A900', l3: '#1976D2' };
@@ -46,7 +46,7 @@ function formatBucket(ms, rangeKey) {
   const date = new Date(ms);
   if (rangeKey === 'last-week') return date.toLocaleString('en-ZA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   if (rangeKey === 'last-month') return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
-  return `Week of ${date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function integrateKwh(rows, startMs, endMs, maxGapMs = 15 * 60 * 1000) {
@@ -71,12 +71,47 @@ async function getSettings(db) {
   return { siteName: row?.site_name || '', currency: row?.currency || 'ZAR', pricePerKwh: row?.price_per_kwh ?? null };
 }
 
+// v2.3: Combine directly recorded samples with recovered EGM C4D history.
+// A recovered sample is omitted only when a direct sample for the same phase
+// exists in its 10-second window. C4D does not contain voltage magnitudes.
+const COMBINED_PHASE_CTE = `WITH combined_phases AS (
+  SELECT device_id, ts, phase, voltage, current, power_kw
+  FROM phase_readings
+  UNION ALL
+  SELECT s.device_id, s.ts, s.phase, NULL AS voltage, s.current, s.power_kw
+  FROM egm_sync_samples s
+  WHERE NOT EXISTS (
+    SELECT 1 FROM phase_readings p
+    WHERE p.device_id = s.device_id AND p.phase = s.phase
+      AND p.ts >= CAST(s.ts / 10000 AS INTEGER) * 10000
+      AND p.ts < CAST(s.ts / 10000 AS INTEGER) * 10000 + 10000
+  )
+)`;
+
+// Site totals and energy use one total per device and timestamp. A direct
+// snapshot takes precedence over synchronized C4D samples in its time window.
+const COMBINED_POWER_CTE = `WITH recovered_totals AS (
+  SELECT device_id, ts, SUM(power_kw) AS total_power_kw
+  FROM egm_sync_samples GROUP BY device_id, ts
+), combined_power AS (
+  SELECT device_id, ts, total_power_kw FROM meter_snapshots
+  UNION ALL
+  SELECT r.device_id, r.ts, r.total_power_kw FROM recovered_totals r
+  WHERE NOT EXISTS (
+    SELECT 1 FROM meter_snapshots m
+    WHERE m.device_id = r.device_id
+      AND m.ts >= CAST(r.ts / 10000 AS INTEGER) * 10000
+      AND m.ts < CAST(r.ts / 10000 AS INTEGER) * 10000 + 10000
+  )
+)`;
+
 async function getDeviceHistory(db, deviceName, range) {
   // Aggregate each phase independently. The resulting phase series share a
   // timestamp axis, but no phase can invalidate or remove another phase's data.
-  const aggregateRows = await allDb(db, `SELECT CAST(ts / ? AS INTEGER) * ? AS ts, phase,
+  const aggregateRows = await allDb(db, `${COMBINED_PHASE_CTE}
+    SELECT CAST(ts / ? AS INTEGER) * ? AS ts, phase,
       AVG(voltage) AS voltage, AVG(current) AS current, AVG(power_kw) AS power_kw
-    FROM phase_readings
+    FROM combined_phases
     WHERE device_id = ? AND ts >= ? AND ts <= ?
     GROUP BY CAST(ts / ? AS INTEGER), phase
     ORDER BY ts ASC, phase ASC`, [range.bucketMs, range.bucketMs, deviceName, range.startMs, range.endMs, range.bucketMs]);
@@ -126,10 +161,11 @@ async function getDeviceHistory(db, deviceName, range) {
     }
   });
 
-  const firstBucket = Math.floor(range.startMs / range.bucketMs) * range.bucketMs;
-  const lastBucket = Math.floor(range.endMs / range.bucketMs) * range.bucketMs;
-  const timestamps = [];
-  for (let ts = firstBucket; ts <= lastBucket; ts += range.bucketMs) timestamps.push(ts);
+  // Match /api/history: plot only buckets containing actual measurements.
+  // Filling every empty 15-minute bucket with null made the PDF draw tiny
+  // disconnected segments, whereas the frontend connects successive samples.
+  // Preserve per-phase nulls for buckets where another phase has data.
+  const timestamps = [...new Set(aggregateRows.map((row) => Number(row.ts)))].sort((a, b) => a - b);
 
   const aggregatesByPhase = Object.fromEntries(PHASES.map((phase) => [phase, new Map()]));
   for (const row of aggregateRows) {
@@ -168,21 +204,17 @@ async function getDeviceHistory(db, deviceName, range) {
 }
 
 async function getSiteHistory(db, range) {
-  return allDb(db, `WITH device_buckets AS (
-      SELECT CAST(ts / ? AS INTEGER) AS bucket, device_id, AVG(total_power_kw) AS power_kw
-      FROM meter_snapshots WHERE ts >= ? AND ts <= ?
-      GROUP BY CAST(ts / ? AS INTEGER), device_id
-    )
-    SELECT bucket * ? AS ts, SUM(power_kw) AS total_power_kw
-    FROM device_buckets GROUP BY bucket ORDER BY bucket ASC`,
-  [range.bucketMs, range.startMs, range.endMs, range.bucketMs, range.bucketMs]);
+  const { siteHistorySql, siteHistoryParams } = require('./services/siteHistoryQuery');
+  return allDb(db, siteHistorySql, siteHistoryParams(range.bucketMs, range.startMs, range.endMs));
 }
 
 async function getEnergy(db, range, deviceName = null) {
   const params = [range.startMs - 15 * 60 * 1000, range.endMs];
   let where = 'ts >= ? AND ts <= ?';
   if (deviceName) { where += ' AND device_id = ?'; params.push(deviceName); }
-  const rows = await allDb(db, `SELECT device_id, ts, total_power_kw FROM meter_snapshots WHERE ${where} ORDER BY device_id, ts ASC`, params);
+  const rows = await allDb(db, `${COMBINED_POWER_CTE}
+    SELECT device_id, ts, total_power_kw FROM combined_power
+    WHERE ${where} ORDER BY device_id, ts ASC`, params);
   const grouped = new Map();
   for (const row of rows) {
     if (!grouped.has(row.device_id)) grouped.set(row.device_id, []);
@@ -193,11 +225,54 @@ async function getEnergy(db, range, deviceName = null) {
   return total;
 }
 
+// Integrate each phase's actual recorded/recovered power samples over the
+// requested period. Do not interpret an instantaneous kW value as kWh.
+async function getPhaseEnergies(db, range, deviceName, disabledIntervals = {}) {
+  const samples = await allDb(db, `${COMBINED_PHASE_CTE}
+    SELECT phase, ts, power_kw FROM combined_phases
+    WHERE device_id = ? AND ts >= ? AND ts <= ?
+    ORDER BY phase, ts ASC`, [deviceName, range.startMs - 15 * 60 * 1000, range.endMs]);
+  const grouped = Object.fromEntries(PHASES.map((phase) => [phase, []]));
+  for (const sample of samples) {
+    if (!PHASES.includes(sample.phase) || sample.power_kw == null) continue;
+    const power = Number(sample.power_kw);
+    if (!Number.isFinite(power)) continue;
+    grouped[sample.phase].push({ ts: Number(sample.ts), total_power_kw: power });
+  }
+  const energies = {};
+  for (const phase of PHASES) {
+    const rows = grouped[phase];
+    let total = 0;
+    for (let i = 1; i < rows.length; i += 1) {
+      const previous = rows[i - 1];
+      const current = rows[i];
+      const gap = current.ts - previous.ts;
+      if (gap <= 0 || gap > 15 * 60 * 1000) continue;
+      const start = Math.max(previous.ts, range.startMs);
+      const end = Math.min(current.ts, range.endMs);
+      if (end <= start) continue;
+      // A disabled phase must not accrue estimated energy across its disabled interval.
+      if ((disabledIntervals[phase] || []).some((interval) =>
+        interval.startMs < end && interval.endMs > start)) continue;
+      total += (previous.total_power_kw + current.total_power_kw) / 2 * (end - start) / 3600000;
+    }
+    energies[phase] = { hasData: rows.some((row) => row.ts >= range.startMs && row.ts <= range.endMs), kwh: total };
+  }
+  return energies;
+}
+
 async function latestSnapshot(db, deviceName) {
-  const snapshot = await getDb(db, 'SELECT * FROM meter_snapshots WHERE device_id = ? ORDER BY ts DESC LIMIT 1', [deviceName]);
+  const snapshot = await getDb(db, `${COMBINED_POWER_CTE}
+    SELECT device_id, ts, total_power_kw FROM combined_power
+    WHERE device_id = ? ORDER BY ts DESC LIMIT 1`, [deviceName]);
   if (!snapshot) return null;
-  const phases = await allDb(db, 'SELECT phase, voltage, current, power_kw FROM phase_readings WHERE device_id = ? AND ts = ?', [deviceName, snapshot.ts]);
-  return { ...snapshot, phases: Object.fromEntries(phases.map((row) => [row.phase, row])) };
+  const phases = await allDb(db, `${COMBINED_PHASE_CTE}
+    SELECT phase, voltage, current, power_kw FROM combined_phases
+    WHERE device_id = ? AND ts >= ? AND ts <= ? ORDER BY ts DESC`,
+    [deviceName, snapshot.ts - 10000, snapshot.ts + 10000]);
+  const byPhase = {};
+  for (const row of phases) if (!byPhase[row.phase]) byPhase[row.phase] = row;
+  return { ...snapshot, phases: byPhase };
 }
 
 function currencyValue(value, currency) {
@@ -416,11 +491,16 @@ async function addDevicePdfPage(doc, db, device, range, settings, addPage = true
   const historyResult = await getDeviceHistory(db, device.name, range);
   const history = historyResult.rows;
   const energyKwh = await getEnergy(db, range, device.name);
+  const phaseEnergies = await getPhaseEnergies(db, range, device.name, historyResult.disabledIntervals);
+  const latestPhasePower = PHASES.map((phase) => latest?.phases?.[phase]?.power_kw)
+    .filter((value) => value != null && Number.isFinite(Number(value)))
+    .map(Number);
+  const totalPhasePowerKw = latestPhasePower.reduce((sum, value) => sum + value, 0);
   const cost = settings.pricePerKwh == null ? null : energyKwh * settings.pricePerKwh;
   addPdfHeader(doc, device.name, `${range.label} | ${formatDateTime(range.startMs)} - ${formatDateTime(range.endMs)} | ${range.resolution}`);
   addMetricRow(doc, [
     { label: 'Status', value: device.enabled === false ? 'Disabled' : (device.status || 'Unknown') },
-    { label: 'Total Power', value: latest ? `${Number(latest.total_power_kw).toFixed(2)} kW` : '--' },
+    { label: 'Total Power', value: latestPhasePower.length ? `${totalPhasePowerKw.toFixed(2)} kW` : '--' },
   ]);
   addMetricRow(doc, [
     { label: 'Energy Usage', value: `${energyKwh.toFixed(2)} kWh` },
@@ -430,10 +510,10 @@ async function addDevicePdfPage(doc, db, device, range, settings, addPage = true
   doc.fillColor('#13293D').fontSize(12).font('Helvetica-Bold').text('Phase Lines');
   const phaseMetrics = PHASES.map((phase) => {
     const enabled = device.phaseConfig?.[phase]?.enabled !== false;
-    const row = latest?.phases?.[phase];
+    const phaseEnergy = phaseEnergies[phase];
     let value = 'No data';
-    if (!enabled) value = 'Disabled';
-    else if (row && Number.isFinite(Number(row.power_kw))) value = `${Number(row.power_kw).toFixed(2)} kW`;
+    if (!enabled && !phaseEnergy.hasData) value = 'Disabled';
+    else if (phaseEnergy.hasData) value = `${phaseEnergy.kwh.toFixed(2)} kWh`;
     return { label: deviceDisplayName(device, phase), value };
   });
   addMetricRow(doc, phaseMetrics);

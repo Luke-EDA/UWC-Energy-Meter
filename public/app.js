@@ -275,6 +275,16 @@ function fullHistoryTimestamp(timestamp) {
   });
 }
 
+function historyAxisMaximum(values) {
+  const maximum = Math.max(0, ...values.filter((value) => Number.isFinite(value)).map(Number));
+  if (maximum <= 0) return 1;
+  const roughStep = maximum / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalized = roughStep / magnitude;
+  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+  return Math.ceil(maximum / step) * step;
+}
+
 function updateChartData(historyPayload) {
   currentHistoryRows = Array.isArray(historyPayload) ? historyPayload : (historyPayload.rows || []);
   const labels = currentHistoryRows.map((row) => formatHistoryAxisLabel(row.ts));
@@ -282,6 +292,7 @@ function updateChartData(historyPayload) {
   PHASES.forEach((phase, index) => {
     chart.data.datasets[index].data = currentHistoryRows.map((row) => row[`${phase}_power_kw`]);
   });
+  chart.options.scales.y.max = historyAxisMaximum(chart.data.datasets.flatMap((dataset) => dataset.data));
   chart.update('none');
 }
 
@@ -301,7 +312,7 @@ function buildChart(historyPayload) {
         data: currentHistoryRows.map((row) => row[`${phase}_power_kw`]),
         borderColor: colours[index],
         backgroundColor: `${colours[index]}22`,
-        tension: 0.25,
+        tension: 0,
         pointRadius: currentHistoryRange === '24h' ? 1.5 : 1,
         pointHoverRadius: 4,
         spanGaps: false
@@ -322,7 +333,7 @@ function buildChart(historyPayload) {
       },
       scales: {
         x: { ticks: { color: themeColours.muted, maxTicksLimit: 12 }, grid: { color: themeColours.border } },
-        y: { ticks: { color: themeColours.muted }, grid: { color: themeColours.border }, title: { display: true, text: 'kW', color: themeColours.text } }
+        y: { min: 0, max: historyAxisMaximum(currentHistoryRows.flatMap((row) => PHASES.map((phase) => Number(row[`${phase}_power_kw`])))), ticks: { color: themeColours.muted, count: 5 }, grid: { color: themeColours.border }, title: { display: true, text: 'kW', color: themeColours.text } }
       }
     }
   });

@@ -1,22 +1,25 @@
 # Changelog
 
-## v2.2.0 Stable Release
-- Promoted the EnergyGuard integration development series to the main branch.
-- Added expanded per-phase electrical measurements, including voltage,
-  current, apparent power, active power, power factor and phase angle.
-- Added EnergyGuard buffered history synchronization and recovery.
-- Improved live measurement refresh and zero-current handling.
-- Updated fresh-install configuration to support an empty device list.
-- Retained manually configurable dummy devices for testing.
-- Preserved configurable estimated electricity cost calculations.
+# v2.3.0 — 3rd Release Build - Graph/export consistency update
 
-### Hardware Validation
-- Investigated CT current under-reading with a reference clamp meter.
-- Identified external CT burden loading as the likely primary cause.
-- Verified improved current readings after removing the external burden.
-- Hardware input biasing and protection review remains outstanding.
+- Include synchronized EnergyGuard C4D history in device and site PDF/Excel exports.
+- Prefer direct live samples when a synchronized record overlaps a direct sample within the same 10-second window.
+- Include recovered power samples in site totals, energy estimates, and last available readings.
+- Recovered C4D samples have no voltage magnitude; voltage cells remain blank unless a direct measurement is available.
+- Update dashboard and device-page version badges to v2.3.0.
+- Update package, lockfile and VERSION metadata to 2.3.0; buildName: Release Build.
 
-## v2.1.4 — Expanded per-phase electrical measurements & remove default dummy devices
+Note: recovered device history is limited by the meter firmware history buffer and successful synchronization. Energy estimates are calculated from available samples, not extrapolated across gaps longer than 15 minutes.
+
+- Export charts use the same history bucket sizes as frontend charts: 7 days = 15 minutes; 1 month = 1 hour; 6 months and 1 year = 1 day.
+- Site dashboard and PDF/XLSX charts now share the same SQL for combining direct and recovered EGM measurements.
+- Frontend phase and site graphs use straight node-to-node lines (no curve smoothing).
+- Note: tariff summary and historical export may cover different periods; their kWh totals should only be compared with matching date windows.
+
+## v2.2.0 - 2nd Release
+- Release build of v2.1.4
+
+## v2.1.4 — Expanded per-phase electrical measurements
 - Fresh installations now start with an empty device list instead of three automatically configured dummy devices. Dummy providers remain available through Add Device. Existing installations must retain their local `src/config/devices.json` to preserve configured devices.
 - Display voltage, current, apparent power (VA), actual/active power (W), power factor, and voltage-current phase angle (degrees) in each phase card.
 - Use EnergyGuard instantaneous API fields directly; preserve native 0–360° angle values.
@@ -44,7 +47,7 @@
 - Keep unavailable/disabled phases as N/A and preserve gaps on communication failure.
 - Preserve neutral status behavior from v2.1.0.
 
-## v2.1.0 — EnergyGuard HTTP integration 
+## v2.1.0 — EnergyGuard HTTP integration (released on main)
 - Integrated live EnergyGuard HTTP measurements into dashboard and device details.
 - Preserved dummy devices and existing history pipeline.
 
